@@ -24,6 +24,8 @@ source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
 # Activate the environment
 conda activate novoplasty_env
 
+#Main scripts directory
+BIN_DIR="/home/mbata001/bioinformatics/cp_assembly"
 
 # Set default seed to the original input
 FINAL_SEED=$2
@@ -90,9 +92,12 @@ EOF
 # Run novoplasty
 NOVOPlasty.pl -c config.txt
 
+STD_SCRIPT="${BIN_DIR}/std_modified.sh"
+REF_GB="../malva.gb"
+
 # Run standardize_cpDNA.sh
 std_output="./${1}_cpDNA_raw.fasta"
-../std_modified.sh -d . -g ../malva.gb -o $std_output -p $1
+bash "$STD_SCRIPT" -d . -g "$REF_GB" -o "$std_output" -p "$1"
 
 ######################### EVENTUALLY COMBINE GETORGANELLE_ENV AND NOVOPLASTY_ENV SO ITS ALL IN ONE ENVIRONMENT #####################
 conda deactivate
@@ -113,7 +118,7 @@ fi
 #################### EVENTUALLY CHANGE THIS TO MAKE IT CUSTOMISABLE!! ############################
 THREADS=16
 
-../bwa_map.sh $1 $std_output $4 $5 $THREADS
+bash "${BIN_DIR}/bwa_map.sh" $1 $std_output $4 $5 $THREADS
 
 echo "Step 4: Map trimmed reads to raw assembly finished, starting Step 5: pilon polishing"
 
@@ -132,7 +137,7 @@ echo "Step 5: pilon polishing finished, starting Step 6: Reuse or make new BAM"
 
 ##### Step 6: If Pilon made changes, remap. Otherwise reuse BAM #####
 if [[ -s ${1}_cpDNA_polished.changes ]]; then
-    ../bwa_map.sh $1 ${1}_cpDNA_polished.fasta $4 $5 $THREADS
+    bash "${BIN_DIR}/bwa_map.sh" $1 ${1}_cpDNA_polished.fasta $4 $5 $THREADS
 else
     echo "? Pilon made no changes; reused previous BAM (no remapping)."
 fi
