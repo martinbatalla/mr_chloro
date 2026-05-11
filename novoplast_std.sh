@@ -29,7 +29,7 @@ conda activate novoplasty_env
 FINAL_SEED=$2
 
 # Check orientation of the seed against the reference
-SEED_STRAND=$(blastn -query $3 -subject $2 -perc_identity 80 -evalue 0.1 -outfmt '6 sstrand' | head -n 1)
+SEED_STRAND=$(blastn -query $3 -subject $2 -perc_identity 80 -evalue 0.1 -outfmt '6 length sstrand' | sort -nr | head -n 1 | awk '{print $2}')
 
 if [ "$SEED_STRAND" == "minus" ]; then
     echo "Seed is inverted. Reverse-complementing before NOVOPlasty..."
@@ -52,7 +52,7 @@ Project:
 Project name          = $1
 Type                  = chloro
 Genome Range          = 145000 - 170000
-K-mer                 = 39
+K-mer                 = 45
 Max memory            = 64
 Extended log          = 0
 Save assembled reads  = no
@@ -92,7 +92,7 @@ NOVOPlasty.pl -c config.txt
 
 # Run standardize_cpDNA.sh
 std_output="./${1}_cpDNA_raw.fasta"
-../standardize_cpDNA.sh -d . -g ../malva.gb -o $std_output -p $1
+../std_modified.sh -d . -g ../malva.gb -o $std_output -p $1
 
 ######################### EVENTUALLY COMBINE GETORGANELLE_ENV AND NOVOPLASTY_ENV SO ITS ALL IN ONE ENVIRONMENT #####################
 conda deactivate
@@ -118,6 +118,9 @@ THREADS=16
 echo "Step 4: Map trimmed reads to raw assembly finished, starting Step 5: pilon polishing"
 
 ##### Step 5: Pilon polishing #####
+# Tell Java it is allowed to use up to 48GB of your 64GB allocation
+export _JAVA_OPTIONS="-Xmx48g"
+
 crun -p ~/envs/getorganelle_env conda run -n getorganelle pilon \
   --genome ${1}_cpDNA_raw.fasta \
   --frags ${1}_cpDNA.bam \
