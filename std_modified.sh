@@ -110,25 +110,46 @@ standardize() {
 # --- MAIN RACE ---
 mkdir -p ./_race_tmp
 echo ">ref" > ./_race_tmp/ref.fa
+
+# Extract reference sequence from GenBank for scoring orientation
 awk '/ORIGIN/,/\/\//' "$gb" | grep -v "ORIGIN" | grep -v "\//" | tr -d "[0-9] " | tr -d '\n' >> ./_race_tmp/ref.fa
 
 shopt -s nullglob
-OPTIONS=(${dir}/Option_*_${prefix}.fasta)
-[ -f "${dir}/Circularized_assembly_1_${prefix}.fasta" ] && OPTIONS+=("${dir}/Circularized_assembly_1_${prefix}.fasta")
+
+# Explicitly target only known assembly outputs
+OPTIONS=()
+# NOVOPlasty outputs:
+OPTIONS+=(${dir}/Option_*_${prefix}.fasta)
+OPTIONS+=(${dir}/Circularized_assembly_*_${prefix}.fasta)
+# GetOrganelle outputs:
+OPTIONS+=(${dir}/*.complete.*.path_sequence.fasta)
+
 shopt -u nullglob
+
+# Safety check: exit if no valid tool outputs are found
+if [ ${#OPTIONS[@]} -eq 0 ]; then
+    echo "ERROR: No NOVOPlasty (Option_*) or GetOrganelle (*.complete.*) files found in $dir."
+    exit 1
+fi
 
 BEST_SCORE=0
 WINNER=""
 WINNING_NAME=""
 
 for opt_path in "${OPTIONS[@]}"; do
-    num=$(basename "$opt_path" | sed 's/.fasta//')
+    # Avoid processing the intended output file if it exists
+    [ "$(basename "$opt_path")" == "$(basename "$out")" ] && continue
+    
+    # Create a clean label for logging
+    num=$(basename "$opt_path" | sed 's/.fasta//' | sed 's/.path_sequence//')
+    
     standardize "$opt_path" "$num"
     
     if [ -f "./_tmp_plastaumatic/out_${num}.fa" ]; then
-        # Score the standardized output
+        # Score standardized output: sum of lengths of alignments in 'plus' orientation
         SCORE=$(blastn -query ./_race_tmp/ref.fa -subject "./_tmp_plastaumatic/out_${num}.fa" -perc_identity 95 -outfmt '6 sstrand length' | awk '$1=="plus" {sum+=$2} END {print sum+0}')
-        echo "Option $num Score: $SCORE"
+        
+        echo -e "Candidate: $num \t Forward-Match Score: $SCORE"
         
         if [ "$SCORE" -ge "$BEST_SCORE" ]; then
             BEST_SCORE=$SCORE
@@ -141,6 +162,14 @@ done
 
 if [ -n "$WINNER" ]; then
     mv "$WINNER" "$out"
-    echo "SUCCESS: Best assembly ($WINNING_NAME) saved to $out"
+    echo "--------------------------------------------------------"
+    echo "SUCCESS: Best assembly ($WINNING_NAME) selected."
+    echo "Finalized output saved to: $out"
+    echo "--------------------------------------------------------"
+else
+    echo "ERROR: Standardization failed for all candidates."
+    exit 1
 fi
+
+# Cleanup
 rm -rf ./_tmp_plastaumatic ./_race_tmp

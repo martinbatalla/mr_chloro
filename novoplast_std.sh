@@ -54,7 +54,7 @@ Project:
 Project name          = $1
 Type                  = chloro
 Genome Range          = 145000 - 170000
-K-mer                 = 45
+K-mer                 = 75
 Max memory            = 64
 Extended log          = 0
 Save assembled reads  = no
@@ -99,65 +99,4 @@ REF_GB="../malva.gb"
 std_output="./${1}_cpDNA_raw.fasta"
 bash "$STD_SCRIPT" -d . -g "$REF_GB" -o "$std_output" -p "$1"
 
-######################### EVENTUALLY COMBINE GETORGANELLE_ENV AND NOVOPLASTY_ENV SO ITS ALL IN ONE ENVIRONMENT #####################
 conda deactivate
-
-enable_lmod
-module load container_env
-module load conda
-
-###### Step 4: Map trimmed reads to raw assembly #####
-#Now check if we found a valid file to work with
-if [[ -f "$std_output" ]]; then
-    echo "Step 4: Map trimmed reads to raw assembly"
-else
-    echo "? No complete assembly or single circular scaffold found for $1. Quitting."
-    exit 1
-fi
-
-#################### EVENTUALLY CHANGE THIS TO MAKE IT CUSTOMISABLE!! ############################
-THREADS=16
-
-bash "${BIN_DIR}/bwa_map.sh" $1 $std_output $4 $5 $THREADS
-
-echo "Step 4: Map trimmed reads to raw assembly finished, starting Step 5: pilon polishing"
-
-##### Step 5: Pilon polishing #####
-# Tell Java it is allowed to use up to 48GB of your 64GB allocation
-export _JAVA_OPTIONS="-Xmx48g"
-
-crun -p ~/envs/getorganelle_env conda run -n getorganelle pilon \
-  --genome ${1}_cpDNA_raw.fasta \
-  --frags ${1}_cpDNA.bam \
-  --output ${1}_cpDNA_polished \
-  --changes \
-  --threads $THREADS
-
-echo "Step 5: pilon polishing finished, starting Step 6: Reuse or make new BAM"
-
-##### Step 6: If Pilon made changes, remap. Otherwise reuse BAM #####
-if [[ -s ${1}_cpDNA_polished.changes ]]; then
-    bash "${BIN_DIR}/bwa_map.sh" $1 ${1}_cpDNA_polished.fasta $4 $5 $THREADS
-else
-    echo "? Pilon made no changes; reused previous BAM (no remapping)."
-fi
-
-
-mv ${1}_cpDNA.bam ${1}_cpDNA_polished.bam #even if pilon made changes, the bwa_map.sh file always outputs/rewrites {1}_cpDNA.bam
-mv ${1}_cpDNA.bam.bai ${1}_cpDNA_polished.bam.bai
-
-echo "Step 6: Reuse or make new BAM finished, starting Step 6b: Ensure polished fasta exists"
-
-##### Step 6b: Ensure polished fasta always exists #####
-if [[ ! -f ${1}_cpDNA_polished.fasta ]]; then
-    cp ${1}_cpDNA_raw.fasta ${1}_cpDNA_polished.fasta
-fi
-
-echo "Step 6b: Ensure polished fasta exists finished, starting Step 7: Calculate coverage"
-
-##### Step 7: Coverage #####
-crun -p ~/envs/getorganelle_env conda run -n getorganelle samtools coverage ${1}_cpDNA_polished.bam \
-  | tee ${1}_coverage.txt
-
-
-echo "? Finished sample: $1. Final, polished, standardized fasta saved as ${1}_cpDNA_polished.fasta"
