@@ -1,0 +1,10 @@
+# Ignore directories created by the script
+script_tests/
+
+# Ignore log files
+*.log
+
+# Ignore common bioinformatics data/output extensions
+*.fasta
+*.gz
+*.fastq
