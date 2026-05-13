@@ -136,27 +136,38 @@ BEST_SCORE=0
 WINNER=""
 WINNING_NAME=""
 
+# --- MAIN RACE ---
+BEST_SCORE=-1
+WINNER=""
+
 for opt_path in "${OPTIONS[@]}"; do
-    # Avoid processing the intended output file if it exists
     [ "$(basename "$opt_path")" == "$(basename "$out")" ] && continue
     
-    # Create a clean label for logging
+    # Extract name for the temp file
     num=$(basename "$opt_path" | sed 's/.fasta//' | sed 's/.path_sequence//')
     
     standardize "$opt_path" "$num"
     
-    if [ -f "./_tmp_plastaumatic/out_${num}.fa" ]; then
-        # Score standardized output: sum of lengths of alignments in 'plus' orientation
-        SCORE=$(blastn -query ./_race_tmp/ref.fa -subject "./_tmp_plastaumatic/out_${num}.fa" -perc_identity 95 -outfmt '6 sstrand length' | awk '$1=="plus" {sum+=$2} END {print sum+0}')
+    # CORRECTED PATH: Must match the dir2 variable inside the standardize function
+    CURRENT_OUT="${dir}/_tmp_plastaumatic/out_${num}.fa"
+    
+    if [ -f "$CURRENT_OUT" ]; then
+        # Score standardized output
+        SCORE=$(blastn -query ./_race_tmp/ref.fa -subject "$CURRENT_OUT" -perc_identity 80 -outfmt '6 sstrand length' | awk '{if($1=="plus") sum+=$2; else sum+=($2*0.1)} END {print sum+0}')
         
-        echo -e "Candidate: $num \t Forward-Match Score: $SCORE"
+        echo -e "Candidate: $num \t Weighted Score: $SCORE"
         
-        if [ "$SCORE" -ge "$BEST_SCORE" ]; then
+        # Comparison logic
+        is_better=$(awk -v s="$SCORE" -v b="$BEST_SCORE" 'BEGIN {print (s >= b ? 1 : 0)}')
+        
+        if [ "$is_better" -eq 1 ]; then
             BEST_SCORE=$SCORE
             WINNING_NAME=$num
-            cp "./_tmp_plastaumatic/out_${num}.fa" "./_race_tmp/winner.fasta"
+            cp "$CURRENT_OUT" "./_race_tmp/winner.fasta"
             WINNER="./_race_tmp/winner.fasta"
         fi
+    else
+        echo "?? Error: Standardization did not create $CURRENT_OUT"
     fi
 done
 
@@ -172,4 +183,4 @@ else
 fi
 
 # Cleanup
-rm -rf ./_tmp_plastaumatic ./_race_tmp
+rm -rf ${dir}/_tmp_plastaumatic ./_race_tmp
