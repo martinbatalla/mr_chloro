@@ -42,7 +42,7 @@ fastp \
     -i ../"$R1" -I ../"$R2" \
     -o ${SAMPLE}_R1.trimmed.fastq.gz -O ${SAMPLE}_R2.trimmed.fastq.gz \
     -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-    -q 15 -l 35 --thread 1 --disable_trim_poly_g
+    -q 15 -l 35 --thread 16 --disable_trim_poly_g
 
 TRIM1="${SAMPLE}_R1.trimmed.fastq.gz"
 TRIM2="${SAMPLE}_R2.trimmed.fastq.gz"
@@ -91,6 +91,9 @@ fi
 if [[ ! -f "$FINAL_RAW_FASTA" ]]; then
     echo "?? Standardization failed to produce $FINAL_RAW_FASTA"
     exit 1
+else
+    #remove to save space
+    rm -rf getorganelle_output/
 fi
 
 ##################################################### STEP 4: Mapping #######################################################
@@ -125,5 +128,9 @@ mv ${SAMPLE}_cpDNA.bam.bai ${SAMPLE}_cpDNA_polished.bam.bai
 echo "Step 7: getting stats from assembly"
 samtools coverage ${SAMPLE}_cpDNA_polished.bam \
     | tee ${SAMPLE}_coverage.txt
+
+#remove to save space and declutter
+rm -f *.bam *.changes *.bam.bai *.pac *.bwt* *.ann *.amb *.0123 *.trimmed.fastq.gz
+
 
 echo "=== Pipeline Finished for $SAMPLE ==="
