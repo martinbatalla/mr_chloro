@@ -12,3 +12,6 @@ log*
 *.gz
 *.fastq
 *.gb
+
+# Ignore obsolete scripts
+all_novoplasty_std.sh
