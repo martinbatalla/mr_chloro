@@ -4,7 +4,7 @@
 #SBATCH --time=24:00:00
 
 # main_cp_pipeline.sh
-# Usage: sbatch main_cp_pipeline.sh SAMPLE_NAME REF_NAME
+# Usage: sbatch main_cp_pipeline.sh SAMPLE_NAME REF_NAME NUMBER_OF_THREADS
 # cwd should include ref.fasta, ref.gb and raw reads in the following format: SAMPLE_NAME_R1_001.fastq.gz and SAMPLE_NAME_R2_001.fastq.gz
 
 
