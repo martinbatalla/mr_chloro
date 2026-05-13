@@ -1,6 +1,8 @@
 #!/bin/bash
-# run_all_samples.sh
+# all_main_pipeline.sh
 # Submit chloroplast pipeline jobs for all samples automatically
+
+REF=$1
 
 # Make sure logs directory exists
 mkdir -p logs
@@ -14,7 +16,7 @@ echo "Created CPsamples.txt for $NUM_SAMPLES samples"
 sbatch <<EOF
 #!/bin/bash
 #SBATCH --job-name=cp_array
-#SBATCH --array=1-${NUM_SAMPLES}%15
+#SBATCH --array=1-${NUM_SAMPLES}%20
 #SBATCH --output=logs/%A_%a.out
 #SBATCH --error=logs/%A_%a.err
 #SBATCH --time=48:00:00
@@ -27,11 +29,8 @@ SAMPLE=\$(sed -n "\${SLURM_ARRAY_TASK_ID}p" CPsamples.txt)
 # Create a link so in order to have a named log file
 ln -snf "$(pwd)/logs/\${SLURM_ARRAY_JOB_ID}_\${SLURM_ARRAY_TASK_ID}.out" "logs/\${SAMPLE}.log"
 
-enable_lmod
-module load container_env
-module load conda
 
 mkdir -p logs
 
-./all_main_pipeline.sh \$SAMPLE 16
+../main_cp_pipeline.sh \$SAMPLE $REF 16
 EOF

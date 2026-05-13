@@ -9,7 +9,7 @@
 
 
 SAMPLE=$1
-THREADS=16
+THREADS=$3
 REF_SEED="${2}.fasta"  # The fasta seed
 REF_GB="${2}.gb"       # The GenBank ref for standardization
 BIN_DIR="/home/mbata001/bioinformatics/cp_assembly"
