@@ -1,5 +1,5 @@
 #!/bin/bash
-# standardize_cpDNA.sh - Final Integrated Version
+# std_modified.sh
 
 set -eo pipefail
 while getopts 'd:g:o:p:' options

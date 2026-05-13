@@ -4,6 +4,8 @@ script_tests/
 # Ignore log files
 *.log
 log*
+*.out
+*.err
 
 # Ignore common data/output extensions
 *.fasta

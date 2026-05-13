@@ -29,14 +29,16 @@ cd "$SAMPLE"
 
 echo "=== Starting Pipeline for $SAMPLE ==="
 
-#load containers
-enable_lmod
-module load container_env
-module load conda
+# Load Conda and activate the unified environment path
+module load miniconda3 2>/dev/null || true
+source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
+
+# Activate using the full path
+conda activate cp_pipe_env
 
 ################################################# STEP 1: fastp #############################################################
 echo "Step 1: running fastp"
-crun -p ~/envs/getorganelle_env conda run -n getorganelle fastp \
+fastp \
     -i ../"$R1" -I ../"$R2" \
     -o ${SAMPLE}_R1.trimmed.fastq.gz -O ${SAMPLE}_R2.trimmed.fastq.gz \
     -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
@@ -47,7 +49,7 @@ TRIM2="${SAMPLE}_R2.trimmed.fastq.gz"
 
 ############################################ STEP 2: GetOrganelle ############################################################
 echo "Step 2: running GetOrganelle"
-crun -p ~/envs/getorganelle_env conda run -n getorganelle get_organelle_from_reads.py \
+get_organelle_from_reads.py \
     -1 "$TRIM1" -2 "$TRIM2" -s ../"$REF_SEED" -F embplant_pt \
     -t $THREADS -o getorganelle_output --overwrite
 
@@ -72,9 +74,8 @@ else
     GO_SCAFFOLD=$(ls ./getorganelle_output/*.scaffolds.*.path_sequence.fasta 2>/dev/null | head -n1)
     if [[ -f "$GO_SCAFFOLD" ]]; then
         SEED_FILE="${SAMPLE}_seed.fasta"
-        # calculate length of each scaffold
+        # calculate length of each scaffold and save longest scaffold to SEED_FILE
         awk '/^>/ { if(n) {print n"\t"h"\t"s}; h=$0; s=""; n=0; next; } {s=s""$0; n+=length($0)} END {if(n) print n"\t"h"\t"s}' "$GO_SCAFFOLD" \
-        # save longest scaffold to SEED_FILE
         | sort -nr | head -n 1 | cut -f2,3 | tr '\t' '\n' > "$SEED_FILE"
         
         # Run NOVOPlasty script (which includes standardization)
@@ -100,7 +101,7 @@ bash "${BIN_DIR}/bwa_map.sh" "$SAMPLE" "$FINAL_RAW_FASTA" "$TRIM1" "$TRIM2" $THR
 echo "Step 5: polishing genome"
 # Provide java with more memory, if not it will crash. 48g might be an overkill, CHECK!!
 export _JAVA_OPTIONS="-Xmx48g"
-crun -p ~/envs/getorganelle_env conda run -n getorganelle pilon \
+pilon \
     --genome "$FINAL_RAW_FASTA" \
     --frags ${SAMPLE}_cpDNA.bam \
     --output ${SAMPLE}_cpDNA_polished \
@@ -122,7 +123,7 @@ mv ${SAMPLE}_cpDNA.bam.bai ${SAMPLE}_cpDNA_polished.bam.bai
 
 ############################################### STEP 7: Coverage Stats ####################################################
 echo "Step 7: getting stats from assembly"
-crun -p ~/envs/getorganelle_env conda run -n getorganelle samtools coverage ${SAMPLE}_cpDNA_polished.bam \
+samtools coverage ${SAMPLE}_cpDNA_polished.bam \
     | tee ${SAMPLE}_coverage.txt
 
 echo "=== Pipeline Finished for $SAMPLE ==="

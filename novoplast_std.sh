@@ -14,16 +14,6 @@
 
 # $6 = insert size (figure an automatic way to get this from the json file). Now ignored and done automatically by the tool, until I have time to look into this.
 
-
-# Load the module 
-module load miniconda3 2>/dev/null || true
-
-# This allows the shell to recognize the 'conda activate' command
-source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
-
-# Activate the environment
-conda activate novoplasty_env
-
 #Main scripts directory
 BIN_DIR="/home/mbata001/bioinformatics/cp_assembly"
 
@@ -98,5 +88,3 @@ REF_GB="../malva.gb"
 # Run standardize_cpDNA.sh
 std_output="./${1}_cpDNA_raw.fasta"
 bash "$STD_SCRIPT" -d . -g "$REF_GB" -o "$std_output" -p "$1"
-
-conda deactivate
