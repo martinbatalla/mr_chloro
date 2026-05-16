@@ -42,7 +42,7 @@ fastp \
     -i ../"$R1" -I ../"$R2" \
     -o ${SAMPLE}_R1.trimmed.fastq.gz -O ${SAMPLE}_R2.trimmed.fastq.gz \
     -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-    -q 15 -l 35 --thread $THREADS --disable_trim_poly_g
+    -q 15 -l 35 thread $((THREADS / 2)) --disable_trim_poly_g
 
 TRIM1="${SAMPLE}_R1.trimmed.fastq.gz"
 TRIM2="${SAMPLE}_R2.trimmed.fastq.gz"
