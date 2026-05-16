@@ -9,7 +9,7 @@
 
 
 SAMPLE=$1
-THREADS=$3
+THREADS=16
 REF_SEED="${2}.fasta"  # The fasta seed
 REF_GB="${2}.gb"       # The GenBank ref for standardization
 BIN_DIR="/home/mbata001/bioinformatics/cp_assembly"
@@ -42,16 +42,14 @@ fastp \
     -i ../"$R1" -I ../"$R2" \
     -o ${SAMPLE}_R1.trimmed.fastq.gz -O ${SAMPLE}_R2.trimmed.fastq.gz \
     -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-    -q 15 -l 35 --thread 16 --disable_trim_poly_g
+    -q 15 -l 35 --thread $THREADS --disable_trim_poly_g
 
 TRIM1="${SAMPLE}_R1.trimmed.fastq.gz"
 TRIM2="${SAMPLE}_R2.trimmed.fastq.gz"
 
 ############################################ STEP 2: GetOrganelle ############################################################
 echo "Step 2: running GetOrganelle"
-get_organelle_from_reads.py \
-    -1 "$TRIM1" -2 "$TRIM2" -s ../"$REF_SEED" -F embplant_pt \
-    -t $THREADS -o getorganelle_output --overwrite
+get_organelle_from_reads.py -1 "$TRIM1" -2 "$TRIM2" -s ../"$REF_SEED" -F embplant_pt -t $THREADS -o getorganelle_output --overwrite
 
 ################################ STEP 3: Handle Assembly & Standardization ###################################################
 echo "Step 3: checking if multiple scaffolds/assemblies for extension and/or standardization"
@@ -87,12 +85,14 @@ else
     fi
 fi
 
-# Safety check: did we get a standardized file (${SAMPLE}_cpDNA_raw.fasta)?
+# Safety check
 if [[ ! -f "$FINAL_RAW_FASTA" ]]; then
     echo "?? Standardization failed to produce $FINAL_RAW_FASTA"
     exit 1
 else
     #remove to save space
+    sync
+    sleep 10
     rm -rf getorganelle_output/
 fi
 
