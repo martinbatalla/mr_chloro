@@ -42,7 +42,7 @@ fastp \
     -i ../"$R1" -I ../"$R2" \
     -o ${SAMPLE}_R1.trimmed.fastq.gz -O ${SAMPLE}_R2.trimmed.fastq.gz \
     -h ${SAMPLE}_fastp.html -j ${SAMPLE}_fastp.json \
-    -q 15 -l 35 thread $((THREADS / 2)) --disable_trim_poly_g
+    -q 15 -l 35 --thread $((THREADS / 2)) --disable_trim_poly_g
 
 TRIM1="${SAMPLE}_R1.trimmed.fastq.gz"
 TRIM2="${SAMPLE}_R2.trimmed.fastq.gz"
@@ -66,21 +66,34 @@ if [[ ${#COMPLETE_PATHS[@]} -ge 1 ]]; then
     bash "${BIN_DIR}/std_modified.sh" -d "./getorganelle_output" -g "../$REF_GB" -o "$FINAL_RAW_FASTA" -p "$SAMPLE"
     # std_modified.sh outputs ${SAMPLE}_cpDNA_raw.fasta
 else
-    echo "? GetOrganelle failed to circularize. Attempting NOVOPlasty extension..."
-    
-    # Isolate longest scaffold as seed
-    GO_SCAFFOLD=$(ls ./getorganelle_output/*.scaffolds.*.path_sequence.fasta 2>/dev/null | head -n1)
-    if [[ -f "$GO_SCAFFOLD" ]]; then
+    echo "? GetOrganelle failed to circularize. Evaluating scaffolds..."
+    # Use nullglob to capture all scaffold files into an array
+    shopt -s nullglob
+    SCAF_FILES=(./getorganelle_output/*.scaffolds.*.path_sequence.fasta)
+    shopt -u nullglob
+
+    if [[ ${#SCAF_FILES[@]} -gt 0 ]]; then
         SEED_FILE="${SAMPLE}_seed.fasta"
-        # calculate length of each scaffold and save longest scaffold to SEED_FILE
-        awk '/^>/ { if(n) {print n"\t"h"\t"s}; h=$0; s=""; n=0; next; } {s=s""$0; n+=length($0)} END {if(n) print n"\t"h"\t"s}' "$GO_SCAFFOLD" \
-        | sort -nr | head -n 1 | cut -f2,3 | tr '\t' '\n' > "$SEED_FILE"
-        
-        # Run NOVOPlasty script (which includes standardization)
+        # Check if multiple isomer scaffold files were produced
+        if [[ ${#SCAF_FILES[@]} -gt 1 ]]; then
+            echo "GetOrganelle produced multiple isomer scaffolds. Picking best one..."
+            bash "${BIN_DIR}/std_modified.sh" -d "./getorganelle_output" -g "../$REF_GB" -o "$FINAL_RAW_FASTA" -p "$SAMPLE"
+            #std_modified.sh outputs as $FINAL_RAW_FASTA", need to change to $SEED_FILE
+            mv "$FINAL_RAW_FASTA" "$SEED_FILE"
+            echo "Renamed $FINAL_RAW_FASTA to $SEED_FILE"
+        else
+            echo "Single scaffold file found. Isolating longest fragment..."
+            GO_SCAFFOLD="${SCAF_FILES[0]}"
+            # Calculate length of each scaffold and save longest to SEED_FILE
+            awk '/^>/ { if(n) {print n"\t"h"\t"s}; h=$0; s=""; n=0; next; } {s=s""$0; n+=length($0)} END {if(n) print n"\t"h"\t"s}' "$GO_SCAFFOLD" \
+            | sort -nr | head -n 1 | cut -f2,3 | tr '\t' '\n' > "$SEED_FILE"
+        fi
+        echo "Launching NOVOPlasty extension using chosen seed..."
         bash "${BIN_DIR}/novoplast_std.sh" "$SAMPLE" "$SEED_FILE" "../$REF_SEED" "$TRIM1" "$TRIM2"
-        # novoplast_std.sh outputs ${SAMPLE}_cpDNA_raw.fasta
+        # novoplast_std.sh will handle the final output standardization back to $FINAL_RAW_FASTA
+        rm -f ${SAMPLE}_sub_R1.fastq.gz ${SAMPLE}_sub_R2.fastq.gz
     else
-        echo "?? No scaffolds found. Assembly failed."
+        echo "?? No scaffolds found. Assembly completely failed."
         exit 1
     fi
 fi

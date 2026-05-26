@@ -44,7 +44,7 @@ Project:
 Project name          = $1
 Type                  = chloro
 Genome Range          = 145000 - 170000
-K-mer                 = 75
+K-mer                 = 39
 Max memory            = 64
 Extended log          = 0
 Save assembled reads  = no
