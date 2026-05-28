@@ -1,11 +1,17 @@
 # Ignore directories:
 script_tests/
+nextflow/
+data/
+results/
+logs/
+.nextflow/
 
 # Ignore log files
 *.log
 log*
 *.out
 *.err
+.nextflow.log*
 
 # Ignore common data/output extensions
 *.fasta
