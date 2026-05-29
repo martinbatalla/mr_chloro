@@ -16,7 +16,7 @@ log.info """\
 
 process FASTP {
     tag "${sample_id}" // Print sample name to the terminal while running
-    container 'https://depot.galaxyproject.org/singularity/fastp%3A1.3.3--h43da1c4_0'
+    container 'quay.io/biocontainers/fastp:1.3.3--h43da1c4_0'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: "*.{html,json}"
     
@@ -42,7 +42,7 @@ process FASTP {
 
 process GETORGANELLE {
     tag "${sample_id}"
-    container 'https://depot.galaxyproject.org/singularity/getorganelle%3A1.7.7.1--pyhdfd78af_0'
+    container 'quay.io/biocontainers/getorganelle:1.7.7.1--pyhdfd78af_0'
     
     // Move only the final fasta assembly results to results folder
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: "*.fasta"
@@ -78,6 +78,8 @@ process GETORGANELLE {
 
 
 process STANDARDIZE{
+    tag "${sample_id}"
+    container 'martinbatalla/mr_assembly:v1'
     
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -90,8 +92,7 @@ process STANDARDIZE{
 
     script:
     """
-    ##### Eventually change this once I create an image of everything to fully containerize, so I don't have to put full paths of scripts and remove "bash" #######
-    bash ${projectDir}/std_modified.sh \
+    std_modified.sh \
     -d . \
     -g ${ref_gb} \
     -o "${sample_id}_cpDNA_raw.fasta" \
@@ -100,6 +101,8 @@ process STANDARDIZE{
 }
 
 process EXTRACT{
+    tag "${sample_id}"
+    container 'martinbatalla/mr_assembly:v1'   
 
     input:
     tuple val(sample_id),  path(scaffolds)
@@ -117,6 +120,8 @@ process EXTRACT{
 }
 
 process BEST_FASTA{
+    tag "${sample_id}"
+    container 'martinbatalla/mr_assembly:v1'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -129,8 +134,7 @@ process BEST_FASTA{
 
     script:
     """
-     ##### Eventually change this once I create an image of everything to fully containerize, so I don't have to put full paths of scripts and remove "bash" #######
-    bash ${projectDir}/std_modified.sh \
+    std_modified.sh \
     -d . \
     -g ${ref_gb} \
     -o "${sample_id}_seed.fasta" \
@@ -141,7 +145,8 @@ process BEST_FASTA{
 
 
 process ORIENT{
-    container  'https://depot.galaxyproject.org/singularity/blast%3A2.9.0--pl526he19e7b1_7'
+    tag "${sample_id}"
+    container  'quay.io/biocontainers/blast:2.9.0--pl526he19e7b1_7'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -173,8 +178,9 @@ process ORIENT{
 }
 
 process NOVOPLASTY{
+    tag "${sample_id}"
 
-    container 'https://depot.galaxyproject.org/singularity/novoplasty%3A4.3.5--pl5321hdfd78af_0'
+    container 'quay.io/biocontainers/novoplasty:4.3.5--pl5321hdfd78af_0'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -240,6 +246,8 @@ process NOVOPLASTY{
 process BWA_MAP{
     tag "${sample_id}"
 
+    container 'martinbatalla/mr_assembly:v1'
+
     input:
     tuple val(sample_id), path(raw_fasta), path(trimmed_r1), path(trimmed_r2) 
 
@@ -248,11 +256,6 @@ process BWA_MAP{
 
     script:
     """
-    ######################## CHANGE THIS ONCE FULLY CONTAINERIZING THE PIPELINE !!!!!!!!!!!!!!! ####################
-    module load miniconda3 2>/dev/null || true
-    source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
-    conda activate cp_pipe_env
-
     echo "=== Mapping reads for ${sample_id} ==="
 
     # Step 1: Index the assembly
@@ -277,7 +280,7 @@ process BWA_MAP{
 
 process PILON{
     tag "${sample_id}"
-    container 'https://depot.galaxyproject.org/singularity/pilon%3A1.24--hdfd78af_0'
+    container 'quay.io/biocontainers/pilon:1.24--hdfd78af_0'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -303,6 +306,7 @@ process PILON{
 
 process REMAP{
     tag "${sample_id}"
+    container 'martinbatalla/mr_assembly:v1'
 
     input:
     tuple val(sample_id), path(polished_fasta), path(pilon_changes), path(trimmed_r1), path(trimmed_r2)
@@ -312,11 +316,6 @@ process REMAP{
 
     script:
     """
-    ######################## CHANGE THIS ONCE FULLY CONTAINERIZING THE PIPELINE !!!!!!!!!!!!!!! ####################
-    module load miniconda3 2>/dev/null || true
-    source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
-    conda activate cp_pipe_env
-
     echo "=== Remapping reads for polished ${sample_id} fasta ==="
 
     # Step 1: Index the assembly
@@ -341,7 +340,7 @@ process REMAP{
 
 process STATS{
     tag "${sample_id}"
-    container 'https://depot.galaxyproject.org/singularity/samtools%3A1.9--h91753b0_8'
+    container 'quay.io/biocontainers/samtools:1.9--h91753b0_8'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 

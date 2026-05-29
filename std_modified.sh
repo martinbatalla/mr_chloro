@@ -1,13 +1,6 @@
 #!/bin/bash
 # std_modified.sh
 
-# Load Conda and activate the unified environment path
-module load miniconda3 2>/dev/null || true
-source /home/mbata001/envs/miniconda3/etc/profile.d/conda.sh
-
-# Activate using the full path
-conda activate cp_pipe_env
-
 set -eo pipefail
 while getopts 'd:g:o:p:' options
 do
