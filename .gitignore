@@ -6,7 +6,6 @@ results/
 logs/
 .nextflow/
 work/
-go_config/
 
 # Ignore log files
 *.log
@@ -27,3 +26,4 @@ main_cp_pipeline.sh
 novoplast_std.sh
 all_main_pipeline.sh
 bwa_map.sh
+check_results.sh
