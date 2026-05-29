@@ -26,3 +26,4 @@ all_novoplasty_std.sh
 main_cp_pipeline.sh
 novoplast_std.sh
 all_main_pipeline.sh
+bwa_map.sh
