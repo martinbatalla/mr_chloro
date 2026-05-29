@@ -61,9 +61,6 @@ process GETORGANELLE {
 
     script:
     """
-    ### PLACEHOLDER: EVENTUALLY MAKE A PARAMETER USER NEEDS TO ADD WHEN RUNNING SCRIPT TO POINT TOWARDS GETORG CONFIG FILES!! ###
-    #get_organelle_config.py -a embplant_pt,embplant_mt --config-dir ${projectDir}/go_config
-
     get_organelle_from_reads.py \
         -1 ${trimmed_r1} \
         -2 ${trimmed_r2} \
