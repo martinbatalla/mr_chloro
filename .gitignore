@@ -5,6 +5,8 @@ data/
 results/
 logs/
 .nextflow/
+work/
+go_config/
 
 # Ignore log files
 *.log
@@ -21,3 +23,6 @@ log*
 
 # Ignore obsolete scripts
 all_novoplasty_std.sh
+main_cp_pipeline.sh
+novoplast_std.sh
+all_main_pipeline.sh
