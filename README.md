@@ -35,8 +35,8 @@ You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVO
 
 When the pipeline finishes, your output directory will contain a folder for each sample ID. Inside, you will find:
 * **HTML/JSON quality reports:** Output of Fastp to check quality of trimming reads. Trimmed reads files are not saved to save space
-* **`{sample_id}_cpDNA_polished.fasta`** Final, polished `.fasta` assembly
-* **`${sample_id}_coverage.txt`** A `.txt` with basic stats of assembly, including the average depth of coverage
+* **`{sample_id}_cpDNA_polished.fasta`:** Final, polished `.fasta` assembly
+* **`${sample_id}_coverage.txt`:** A `.txt` with basic stats of assembly, including the average depth of coverage
 
 
 ## Pipeline Architecture
