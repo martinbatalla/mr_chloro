@@ -16,13 +16,13 @@ nextflow run martinbatalla/mr_assembly -profile standard --input_dir /path/to/re
 nextflow run martinbatalla/mr_assembly -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 \`\`\`
 
-## 📦 Dependencies
+## Dependencies
 
 You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVOPlasty, etc.) locally. The pipeline is fully containerized. You only need:
 * [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) (version 23.10.0 or later)
 * Docker (for local execution) OR Singularity (for HPC execution)
 
-## ⚙️ Parameters
+## Parameters
 
 | Parameter | Description |
 |-----------|-------------|
@@ -31,15 +31,15 @@ You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVO
 | `--ref_gb` | Path to the GenBank (`.gb`) reference file used for standardizing the starting position. |
 | `--out_dir` | (Optional) Directory where results will be saved. Default: `results/`. |
 
-## 📁 Pipeline Outputs
+## Pipeline Outputs
 
 When the pipeline finishes, your output directory will contain a folder for each sample ID. Inside, you will find:
-* **[Briefly describe the HTML/JSON quality reports]**
-* **[Briefly describe the final standardized fasta]**
-* **[Briefly describe the coverage stats]**
+* **HTML/JSON quality reports:** Output of Fastp to check quality of trimming reads. Trimmed reads files are not saved to save space
+* **`{sample_id}_cpDNA_polished.fasta`** Final, polished `.fasta` assembly
+* **`${sample_id}_coverage.txt`** A `.txt` with basic stats of assembly, including the average depth of coverage
 
 
-## 🛠️ Pipeline Architecture
+## Pipeline Architecture
 
 1. **Quality Control:** Fastp
 2. **Primary Assembly:** GetOrganelle 
