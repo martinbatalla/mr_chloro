@@ -35,6 +35,7 @@ You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVO
 
 When the pipeline finishes, your output directory will contain a folder for each sample ID. Inside, you will find:
 * **HTML/JSON quality reports:** Output of Fastp to check quality of trimming reads. Trimmed reads files are not saved to save space
+* **`${sample_id}_cpDNA_raw.fasta`:** Raw, pre-polished assembly of genome as outputted by GetOrganelle or NOVOPlasty
 * **`${sample_id}_cpDNA_polished.fasta`:** Final, polished `.fasta` assembly
 * **`${sample_id}_coverage.txt`:** A `.txt` with basic stats of assembly, including the average depth of coverage
 
@@ -47,3 +48,22 @@ When the pipeline finishes, your output directory will contain a folder for each
 4. **Standardization:** Custom Python/Bash logic to rotate assemblies to a uniform starting position and select correct isomer (if isomers present)
 5. **Polishing:** BWA-MEM2 mapping followed by Pilon consensus correction
 6. **Statistics** Samtools to get average depth of coverage of final, polished assembly
+
+
+## Citation
+
+**MrAssembly** is currently pre-publication. If you use this pipeline in your research, please cite this GitHub repository directly:
+
+> Batalla, M. I. (2026). *MrAssembly*: A Nextflow pipeline for automated chloroplast genome assembly. GitHub repository. https://github.com/martinbatalla/mr_assembly
+
+## Acknowledgements & Credits
+
+This pipeline automates and standardizes the workflows of several open-source bioinformatics tools. If you use `MrAssembly`, please ensure you also cite the primary tools it utilizes:
+
+* **Fastp:** Chen, S., et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. *Bioinformatics*.
+* **GetOrganelle:** Jin, J.-J., et al. (2020). GetOrganelle: a fast and versatile toolkit for accurate de novo assembly of organelle genomes. *Genome Biology*.
+* **NOVOPlasty:** Dierckxsens, N., et al. (2017). NOVOPlasty: de novo assembly of organelle genomes from whole genome data. *Nucleic Acids Research*.
+* **BWA-MEM2:** Vasimuddin, M., et al. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. *IEEE IPDPS*.
+* **SAMtools:** Li, H., et al. (2009). The Sequence Alignment/Map format and SAMtools. *Bioinformatics*.
+* **Pilon:** Walker, B. J., et al. (2014). Pilon: an integrated tool for comprehensive microbial variant detection and genome assembly improvement. *PLoS One*.
+* **BLAST+:** Camacho, C., et al. (2009). BLAST+: architecture and applications. *BMC Bioinformatics*.
