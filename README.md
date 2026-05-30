@@ -1,4 +1,4 @@
-# mr_assembly: Chloroplast Assembly Pipeline
+# Mr_Assembly: Chloroplast Assembly Pipeline
 
 A Nextflow pipeline designed for the automated assembly, polishing, and standardization of chloroplast genomes (optimized for *Nototriche* (Malvaceae) and related genera).
 
