@@ -7,13 +7,11 @@ A Nextflow pipeline designed for the automated assembly, polishing, and standard
 You do not need to clone this repository manually. Nextflow will handle the download and execution automatically. 
 
 **Run on a local machine (requires Docker):**
-\`\`\`bash
-nextflow run martinbatalla/mr_assembly -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+\`\`\`nextflow run martinbatalla/mr_assembly -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 \`\`\`
 
 **Run on an HPC cluster (requires Singularity & SLURM):**
-\`\`\`bash
-nextflow run martinbatalla/mr_assembly -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+\`\`\`nextflow run martinbatalla/mr_assembly -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 \`\`\`
 
 ## Dependencies
@@ -38,15 +36,20 @@ When the pipeline finishes, your output directory will contain a folder for each
 * **`${sample_id}_cpDNA_raw.fasta`:** Raw, pre-polished assembly of genome as outputted by GetOrganelle or NOVOPlasty
 * **`${sample_id}_cpDNA_polished.fasta`:** Final, polished `.fasta` assembly
 * **`${sample_id}_coverage.txt`:** A `.txt` with basic stats of assembly, including the average depth of coverage
+If NOVOPlasty was run, some additions outputs may include:
+* **`${sample_id}_seed.fasta`:** Best scaffold output by GetOrganelle used as a seed to extend in NOVOPlasty
+* **`Circularized_assembly_{1-9)_${sample_id}.fasta`:** Circulized genome outputted by NOVOPlasty
+* **`Contigs_{1-9)_${sample_id}.fasta`:** Contigs outputted by NOVOPlasty
+* **`Option_{1-9)_${sample_id}.fasta`:** Circulized genomes outputted by NOVOPlasty. When multiple options are present, these mostly have display different orientations of the SSC (MrAssembly selects the best one).
 
 
 ## Pipeline Architecture
 
-1. **Quality Control:** Fastp
-2. **Primary Assembly:** GetOrganelle 
-3. **Secondary Assembly/Rescue:** NOVOPlasty (extends best scaffold produced by GetOrganelle)
+1. **Quality Control:** Fastp to trim reads from adapters
+2. **Primary Assembly:** GetOrganelle for initial assembly attempt
+3. **Secondary Assembly/Rescue:** If no complete genome is outputted from GetOrganelle, NOVOPlasty extends the best scaffold produced by GetOrganelle
 4. **Standardization:** Custom Python/Bash logic to rotate assemblies to a uniform starting position and select correct isomer (if isomers present)
-5. **Polishing:** BWA-MEM2 mapping followed by Pilon consensus correction
+5. **Polishing:** BWA-MEM2 mapping of trimmed reads to standardized assembly followed by Pilon consensus correction
 6. **Statistics** Samtools to get average depth of coverage of final, polished assembly
 
 
@@ -63,7 +66,7 @@ This pipeline automates and standardizes the workflows of several open-source bi
 * **Fastp:** Chen, S., et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. *Bioinformatics*.
 * **GetOrganelle:** Jin, J.-J., et al. (2020). GetOrganelle: a fast and versatile toolkit for accurate de novo assembly of organelle genomes. *Genome Biology*.
 * **NOVOPlasty:** Dierckxsens, N., et al. (2017). NOVOPlasty: de novo assembly of organelle genomes from whole genome data. *Nucleic Acids Research*.
-* **BWA-MEM2:** Vasimuddin, M., et al. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. *IEEE IPDPS*.
-* **SAMtools:** Li, H., et al. (2009). The Sequence Alignment/Map format and SAMtools. *Bioinformatics*.
-* **Pilon:** Walker, B. J., et al. (2014). Pilon: an integrated tool for comprehensive microbial variant detection and genome assembly improvement. *PLoS One*.
 * **BLAST+:** Camacho, C., et al. (2009). BLAST+: architecture and applications. *BMC Bioinformatics*.
+* **BWA-MEM2:** Vasimuddin, M., et al. (2019). Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems. *IEEE IPDPS*.
+* **Pilon:** Walker, B. J., et al. (2014). Pilon: an integrated tool for comprehensive microbial variant detection and genome assembly improvement. *PLoS One*.
+* **SAMtools:** Li, H., et al. (2009). The Sequence Alignment/Map format and SAMtools. *Bioinformatics*.

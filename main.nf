@@ -279,7 +279,7 @@ process PILON{
     tag "${sample_id}"
     container 'quay.io/biocontainers/pilon:1.24--hdfd78af_0'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: '*.fasta'
 
     input:
     tuple val(sample_id), path(raw_fasta), path(cp_bam), path(cp_bai)
