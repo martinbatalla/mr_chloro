@@ -2,16 +2,6 @@
 
 nextflow.enable.dsl=2
 
-log.info """\
-         MR. CHLORO: ASSEMBLE CHLOROPLAST GENOMES
-    =================================================
-    Input Directory: ${params.input_dir}
-    Reference Seed : ${params.ref_seed}
-    Reference GB   : ${params.ref_gb}
-    Output Dir     : ${params.out_dir}
-    =================================================
-    """
-    .stripIndent()
 
 process FASTP {
     tag "${sample_id}" // Print sample name to the terminal while running
@@ -355,6 +345,18 @@ process STATS{
 
 
 workflow {
+    log.info """\
+         MR. CHLORO: ASSEMBLE CHLOROPLAST GENOMES
+    =================================================
+    Input Directory: ${params.input_dir}
+    Reference Seed : ${params.ref_seed}
+    Reference GB   : ${params.ref_gb}
+    Output Dir     : ${params.out_dir}
+    =================================================
+    """
+    .stripIndent()
+
+
     // Capture all paired-end sequencing files matching pattern
     // flat: true ensures R1 and R2 are passed as an array [R1, R2]
     read_pairs_ch = Channel.fromFilePairs("${params.input_dir}/*_R{1,2}_001.fastq.gz", flat: true)
