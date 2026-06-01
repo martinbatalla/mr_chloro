@@ -1,24 +1,39 @@
 # MrChloro: Chloroplast Assembly Pipeline
 
-A Nextflow pipeline designed for the automated assembly, polishing, and standardization of chloroplast genomes (optimized for *Nototriche* (Malvaceae) and related genera).
+A Nextflow pipeline designed for the automated assembly, polishing, and standardization of chloroplast genomes (optimized for *Nototriche* (Malvaceae) and related genera). The pipeline is based on the assembly of genomes by GetOrganelle or, if failed, the extension and completion of genomes from GetOrganelle's output using NOVOPlasty; genomes are then standardized and polished automatically.
+
+Fully containerized tool; no need to pre-download or install any files, tools, or dependencies other than those which are already installed in an HPC cluster (or Docker, if running locally or via AWS) See **Dependencies** section.
+
+## Pipeline Architecture
+
+1. **Quality Control:** Fastp to trim adapters out of reads
+2. **Primary Assembly:** GetOrganelle for initial assembly attempt
+3. **Secondary Assembly/Rescue:** If no complete genome is outputted from GetOrganelle, NOVOPlasty for extension of best scaffold produced by GetOrganelle (automatically inverted if orientation does not match the standard)
+4. **Standardization:** Custom Python/Bash logic to rotate assemblies to a uniform starting position and select correct isomer (if isomers present)
+5. **Polishing:** BWA-MEM2 mapping of trimmed reads to standardized assembly followed by Pilon consensus correction
+6. **Re-mapping:** If pilon produced changed, BWA-MEM2 mapping of reads to the new, polished genome
+7. **Statistics** Samtools to get basic statistics (e.g.: average depth of coverage.) of final, polished assembly
 
 ## Quick Start
 
 You do not need to clone this repository manually. Nextflow will handle the download and execution automatically. 
 
 **Run on a local machine (requires Docker):**
-\`\`\`nextflow run martinbatalla/mr_chloro -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
-\`\`\`
+```
+nextflow run martinbatalla/mr_chloro -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+```
 
 **Run on an HPC cluster (requires Singularity & SLURM):**
-\`\`\`nextflow run martinbatalla/mr_chloro -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
-\`\`\`
+```
+nextflow run martinbatalla/mr_chloro -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+```
 
 ## Dependencies
 
 You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVOPlasty, etc.) locally. The pipeline is fully containerized. You only need:
 * [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) (version 23.10.0 or later)
 * Docker (for local execution) OR Singularity (for HPC execution)
+ If running via an HPC cluster, Nextflow and dependencies are usually already installed, although they may need to be loaded by user (e.g.: `module load nextflow`)
 
 ## Parameters
 
@@ -38,19 +53,9 @@ When the pipeline finishes, your output directory will contain a folder for each
 * **`${sample_id}_coverage.txt`:** A `.txt` with basic stats of assembly, including the average depth of coverage
 If NOVOPlasty was run, some additions outputs may include:
 * **`${sample_id}_seed.fasta`:** Best scaffold output by GetOrganelle used as a seed to extend in NOVOPlasty
-* **`Circularized_assembly_{1-9)_${sample_id}.fasta`:** Circulized genome outputted by NOVOPlasty
-* **`Contigs_{1-9)_${sample_id}.fasta`:** Contigs outputted by NOVOPlasty
-* **`Option_{1-9)_${sample_id}.fasta`:** Circulized genomes outputted by NOVOPlasty. When multiple options are present, these mostly have display different orientations of the SSC (MrChloro selects the best one).
-
-
-## Pipeline Architecture
-
-1. **Quality Control:** Fastp to trim reads from adapters
-2. **Primary Assembly:** GetOrganelle for initial assembly attempt
-3. **Secondary Assembly/Rescue:** If no complete genome is outputted from GetOrganelle, NOVOPlasty extends the best scaffold produced by GetOrganelle
-4. **Standardization:** Custom Python/Bash logic to rotate assemblies to a uniform starting position and select correct isomer (if isomers present)
-5. **Polishing:** BWA-MEM2 mapping of trimmed reads to standardized assembly followed by Pilon consensus correction
-6. **Statistics** Samtools to get average depth of coverage of final, polished assembly
+* **`Circularized_assembly_[1-9]_${sample_id}.fasta`:** Circularized genome outputted by NOVOPlasty
+* **`Contigs_[1-9]_${sample_id}.fasta`:** Contigs outputted by NOVOPlasty
+* **`Option_[1-9]_${sample_id}.fasta`:** Circulized genomes outputted by NOVOPlasty. When multiple options are present, these mostly display different orientations of the SSC (MrChloro selects the best one).
 
 
 ## Citation
