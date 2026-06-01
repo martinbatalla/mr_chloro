@@ -1,16 +1,15 @@
 #!/usr/bin/env nextflow
 
-// This enables the modern "DSL2" syntax for Nextflow
 nextflow.enable.dsl=2
 
 log.info """\
-    M R .  C H L O R O: A S S E M B L E C H L O R O P L A S T S
-    ===========================================================
+         MR. CHLORO: ASSEMBLE CHLOROPLAST GENOMES
+    =================================================
     Input Directory: ${params.input_dir}
     Reference Seed : ${params.ref_seed}
     Reference GB   : ${params.ref_gb}
     Output Dir     : ${params.out_dir}
-    ===========================================================
+    =================================================
     """
     .stripIndent()
 
