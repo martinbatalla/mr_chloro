@@ -6,6 +6,7 @@ results/
 logs/
 .nextflow/
 work/
+test/
 
 # Ignore log files
 *.log
