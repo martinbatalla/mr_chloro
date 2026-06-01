@@ -7,7 +7,7 @@ process FASTP {
     tag "${sample_id}" // Print sample name to the terminal while running
     container 'quay.io/biocontainers/fastp:1.3.3--h43da1c4_0'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: "*.{html,json}"
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: "*.{html,json}"
     
     input:
     // Take a sample ID and a pair of reads from the input channel
@@ -34,7 +34,7 @@ process GETORGANELLE {
     container 'quay.io/biocontainers/getorganelle:1.7.7.1--pyhdfd78af_0'
     
     // Move only the final fasta assembly results to results folder
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: "*.fasta"
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: "*.fasta"
 
     input:
     // Accept the trimmed reads bundle from FASTP
@@ -68,7 +68,7 @@ process STANDARDIZE{
     tag "${sample_id}"
     container 'martinbatalla/mr_chloro:v1'
     
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
     tuple val(sample_id), path(getorganelle_fasta)
@@ -110,7 +110,7 @@ process BEST_FASTA{
     tag "${sample_id}"
     container 'martinbatalla/mr_chloro:v1'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
     tuple val(sample_id), path(multi_scaffs)
@@ -135,7 +135,7 @@ process ORIENT{
     tag "${sample_id}"
     container  'quay.io/biocontainers/blast:2.9.0--pl526he19e7b1_7'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
     tuple val(sample_id), path(pre_seed)
@@ -169,7 +169,7 @@ process NOVOPLASTY{
 
     container 'quay.io/biocontainers/novoplasty:4.3.5--pl5321hdfd78af_0'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
     tuple val(sample_id), path(seed_file), path(trimmed_r1), path(trimmed_r2)
@@ -269,7 +269,7 @@ process PILON{
     tag "${sample_id}"
     container 'quay.io/biocontainers/pilon:1.24--hdfd78af_0'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy', pattern: '*.fasta'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: '*.fasta'
 
     input:
     tuple val(sample_id), path(raw_fasta), path(cp_bam), path(cp_bai)
@@ -329,7 +329,7 @@ process STATS{
     tag "${sample_id}"
     container 'quay.io/biocontainers/samtools:1.9--h91753b0_8'
 
-    publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
+    publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
     tuple val(sample_id), path(final_bam), path(final_bai)
