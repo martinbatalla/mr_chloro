@@ -1,4 +1,4 @@
-# MrAssembly: Chloroplast Assembly Pipeline
+# MrChloro: Chloroplast Assembly Pipeline
 
 A Nextflow pipeline designed for the automated assembly, polishing, and standardization of chloroplast genomes (optimized for *Nototriche* (Malvaceae) and related genera).
 
@@ -7,11 +7,11 @@ A Nextflow pipeline designed for the automated assembly, polishing, and standard
 You do not need to clone this repository manually. Nextflow will handle the download and execution automatically. 
 
 **Run on a local machine (requires Docker):**
-\`\`\`nextflow run martinbatalla/mr_assembly -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+\`\`\`nextflow run martinbatalla/mr_chloro -profile standard --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 \`\`\`
 
 **Run on an HPC cluster (requires Singularity & SLURM):**
-\`\`\`nextflow run martinbatalla/mr_assembly -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
+\`\`\`nextflow run martinbatalla/mr_chloro -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 \`\`\`
 
 ## Dependencies
@@ -40,7 +40,7 @@ If NOVOPlasty was run, some additions outputs may include:
 * **`${sample_id}_seed.fasta`:** Best scaffold output by GetOrganelle used as a seed to extend in NOVOPlasty
 * **`Circularized_assembly_{1-9)_${sample_id}.fasta`:** Circulized genome outputted by NOVOPlasty
 * **`Contigs_{1-9)_${sample_id}.fasta`:** Contigs outputted by NOVOPlasty
-* **`Option_{1-9)_${sample_id}.fasta`:** Circulized genomes outputted by NOVOPlasty. When multiple options are present, these mostly have display different orientations of the SSC (MrAssembly selects the best one).
+* **`Option_{1-9)_${sample_id}.fasta`:** Circulized genomes outputted by NOVOPlasty. When multiple options are present, these mostly have display different orientations of the SSC (MrChloro selects the best one).
 
 
 ## Pipeline Architecture
@@ -55,13 +55,13 @@ If NOVOPlasty was run, some additions outputs may include:
 
 ## Citation
 
-**MrAssembly** is currently pre-publication. If you use this pipeline in your research, please cite this GitHub repository directly:
+**MrChloro** is currently pre-publication. If you use this pipeline in your research, please cite this GitHub repository directly:
 
-> Batalla, M. I. (2026). *MrAssembly*: A Nextflow pipeline for automated chloroplast genome assembly. GitHub repository. https://github.com/martinbatalla/mr_assembly
+> Batalla, M. I. (2026). *MrChloro*: A Nextflow pipeline for automated chloroplast genome assembly. GitHub repository. https://github.com/martinbatalla/mr_chloro
 
 ## Acknowledgements & Credits
 
-This pipeline automates and standardizes the workflows of several open-source bioinformatics tools. If you use `MrAssembly`, please ensure you also cite the primary tools it utilizes:
+This pipeline automates and standardizes the workflows of several open-source bioinformatics tools. If you use `MrChloro`, please ensure you also cite the primary tools it utilizes:
 
 * **Fastp:** Chen, S., et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. *Bioinformatics*.
 * **GetOrganelle:** Jin, J.-J., et al. (2020). GetOrganelle: a fast and versatile toolkit for accurate de novo assembly of organelle genomes. *Genome Biology*.

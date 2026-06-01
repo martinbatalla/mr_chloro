@@ -4,13 +4,13 @@
 nextflow.enable.dsl=2
 
 log.info """\
-    C H L O R O P L A S T   A S S E M B L Y   P I P E L I N E
-    ========================================================
+    M R .  C H L O R O: A S S E M B L E C H L O R O P L A S T S
+    ===========================================================
     Input Directory: ${params.input_dir}
     Reference Seed : ${params.ref_seed}
     Reference GB   : ${params.ref_gb}
     Output Dir     : ${params.out_dir}
-    ========================================================
+    ===========================================================
     """
     .stripIndent()
 
@@ -76,7 +76,7 @@ process GETORGANELLE {
 
 process STANDARDIZE{
     tag "${sample_id}"
-    container 'martinbatalla/mr_assembly:v1'
+    container 'martinbatalla/mr_chloro:v1'
     
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -99,7 +99,7 @@ process STANDARDIZE{
 
 process EXTRACT{
     tag "${sample_id}"
-    container 'martinbatalla/mr_assembly:v1'   
+    container 'martinbatalla/mr_chloro:v1'   
 
     input:
     tuple val(sample_id),  path(scaffolds)
@@ -118,7 +118,7 @@ process EXTRACT{
 
 process BEST_FASTA{
     tag "${sample_id}"
-    container 'martinbatalla/mr_assembly:v1'
+    container 'martinbatalla/mr_chloro:v1'
 
     publishDir "${params.out_dir}/${sample_id}", mode: 'copy'
 
@@ -243,7 +243,7 @@ process NOVOPLASTY{
 process BWA_MAP{
     tag "${sample_id}"
 
-    container 'martinbatalla/mr_assembly:v1'
+    container 'martinbatalla/mr_chloro:v1'
 
     input:
     tuple val(sample_id), path(raw_fasta), path(trimmed_r1), path(trimmed_r2) 
@@ -303,7 +303,7 @@ process PILON{
 
 process REMAP{
     tag "${sample_id}"
-    container 'martinbatalla/mr_assembly:v1'
+    container 'martinbatalla/mr_chloro:v1'
 
     input:
     tuple val(sample_id), path(polished_fasta), path(pilon_changes), path(trimmed_r1), path(trimmed_r2)
