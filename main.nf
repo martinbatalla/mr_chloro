@@ -52,6 +52,7 @@ process GETORGANELLE {
     tuple val(sample_id), path(trimmed_r1), path(trimmed_r2)
     // Accept the global reference seed file path
     path ref_seed
+    path go_config_dir
 
     output:
     // Export the final assembly path so we can pass it to downstream validation tools later
@@ -68,7 +69,7 @@ process GETORGANELLE {
         -F embplant_pt \
         -t ${task.cpus} \
         -o ${sample_id}_getorganelle_output \
-        --config-dir ${projectDir}/go_config \
+        --config-dir ${go_config_dir} \
         --overwrite
     """
 }
@@ -365,7 +366,7 @@ workflow {
     // Run GETORGANELLE
     //   FASTP.out.trimmed_reads (the tuple containing sample_id, trimmed r1, and trimmed r2)
     //   params.ref_seed (the global path to seed file)
-    GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed))
+    GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed), "${projectDir}/go_config")
 
     // Organize getorganelle output
     scaffold_branch_ch = GETORGANELLE.out.scaffold_paths
