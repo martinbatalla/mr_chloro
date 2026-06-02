@@ -2,7 +2,7 @@
 
 A Nextflow pipeline designed for the automated assembly, polishing, and standardization of chloroplast genomes (optimized for *Nototriche* (Malvaceae) and related genera). The pipeline is based on the assembly of genomes by GetOrganelle or, if failed, the extension and completion of genomes from GetOrganelle's output using NOVOPlasty; genomes are then standardized and polished automatically.
 
-Fully containerized tool; no need to pre-download or install any files, tools, or dependencies other than those which are already installed in an HPC cluster (or Docker, if running locally or via AWS) See **Dependencies** section.
+Fully containerized tool; no need to pre-download or install any files, tools, or dependencies other than those which are typically already installed in an HPC cluster (or Docker, if running locally or via AWS) See **Dependencies** section.
 
 ## Pipeline Architecture
 
