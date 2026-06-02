@@ -43,6 +43,11 @@ You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVO
 | `--ref_seed` | Path to the `.fasta` seed file used for NOVOPlasty and GetOrganelle orientation. |
 | `--ref_gb` | Path to the GenBank (`.gb`) reference file used for standardizing the starting position. |
 | `--out_dir` | (Optional) Directory where results will be saved. Default: `results/`. |
+| `--cpus` | (Optional) Number of cpus assigned to processes. Default: local/AWS = 6, hpc = 16 |
+| `--memory` | (Optional) Memory allocated to processes. Default: local/AWS = '8 GB', hpc = '64 GB' |
+| `--fastp_cpus` | (Optional) Number of cpus assigned to fastp (having too many may prevent threads from closing and freeze the whole pipeline). Default: local/AWS = 6, hpc = 8 |
+| `--fastp_memory` | (Optional) Memory allocated to fastp. Default: local/AWS = '8 GB', hpc = '32 GB' |
+
 
 ## Pipeline Outputs
 
