@@ -44,66 +44,50 @@ standardize() {
     cp "$clean_fasta" "$working_fa"
   fi
 
-  # 3. RESTORED PLASTAUMATIC ROTATION LOGIC
-  head -1 "$working_fa" > "${dir2}/header"
-  blastn -task blastn -query "$working_fa" -subject "$working_fa" -perc_identity 99 -evalue 0.00001 -outfmt '6 qseqid qstart qend sseqid sstart send length pident' | awk '$2!=$5&&$3!=$6 {print}' | sort -k7,7nr -k2,2n > "${dir2}/_tmp.blast.out"
+  # 3. ROTATE TO LSC BOUNDARY USING SELF-BLAST
+  # Extract the coordinates of the Inverted Repeats (ignoring the 100% self-to-self hit)
+  blastn -task blastn -query "$working_fa" -subject "$working_fa" -perc_identity 99 -evalue 0.00001 -outfmt '6 qstart qend sstart send' | awk '$1!=$3 {print}' | head -1 > "${dir2}/_tmp.blast.out"
   
-  if [[ $(awk '{print $7}' "${dir2}/_tmp.blast.out" | head -1) -le 10000 ]] && [[ $seq_len -le 150000 ]]; then 
-    echo "No significant IR detected, outputting oriented genome."
-    cat "$working_fa" | sed ':a; $!N; /^>/!s/\n\([^>]\)/\1/; ta; P; D' | sed "s/^>.*$/>${prefix}/" > "${dir2}/out_${opt_num}.fa"
-  else 
-    head -2 "${dir2}/_tmp.blast.out" > "${dir2}/_tmp.blast.out2" 
-    local start=$(head -1 "${dir2}/_tmp.blast.out" | awk '{print $2}')
-    local end=$(head -1 "${dir2}/_tmp.blast.out" | awk '{print $5}')
+  if [ -s "${dir2}/_tmp.blast.out" ] && [[ $seq_len -le 250000 ]]; then 
+    local coords=$(cat "${dir2}/_tmp.blast.out")
     
-    if [ $start -eq 1 ]; then  
-      awk '$3=='$seq_len' && $6-1=='$end' {print}' "${dir2}/_tmp.blast.out" >> "${dir2}/_tmp.blast.out2" 
-    elif [ $end -eq $seq_len ]; then
-      awk '$2==1 && $5+1=='$start' {print}' "${dir2}/_tmp.blast.out" >> "${dir2}/_tmp.blast.out2"
-    fi
-    mv "${dir2}/_tmp.blast.out2" "${dir2}/_tmp.blast.out"
+    # Sort the 4 boundaries to get C1, C2, C3, and C4 sequentially along the circular genome
+    local C1=$(echo "$coords" | tr -s '[:space:]' '\n' | sort -n | sed -n '1p')
+    local C2=$(echo "$coords" | tr -s '[:space:]' '\n' | sort -n | sed -n '2p')
+    local C3=$(echo "$coords" | tr -s '[:space:]' '\n' | sort -n | sed -n '3p')
+    local C4=$(echo "$coords" | tr -s '[:space:]' '\n' | sort -n | sed -n '4p')
 
-    if [ $(grep -c "^" "${dir2}/_tmp.blast.out") -gt 2 ]; then 
-        local ir_tmp=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $6-1}')
-        local sc1=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $6-$3}')
-        local sc2=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $2-$5}')
-        if [ $sc2 -gt $sc1 ]; then 
-            lsc=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$5+1"-"$2-1}')
-            ira_start=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$2"-"$3}')
-            ira_end=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$2"-"$3}') 
-            ssc=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$3+1"-"$6-1}')
-            irb_start=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$6"-"$5}') 
-            irb_end=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$6"-"$5}')
-        else 
-            lsc=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$3+1"-"$6-1}')
-            ira_start=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$6"-"$5}') 
-            ira_end=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$6"-"$5}')
-            ssc=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$5+1"-"$2-1}')
-            irb_start=$(cat "${dir2}/_tmp.blast.out" | awk '$3=='$seq_len' {print $1":"$2"-"$3}')
-            irb_end=$(cat "${dir2}/_tmp.blast.out" | awk '$5=='$ir_tmp' {print $1":"$2"-"$3}') 
-        fi 
-        samtools faidx "$working_fa" "$irb_start" | sed "s/$irb_start/IRb/" > ${dir2}/irbs 
-        samtools faidx "$working_fa" "$irb_end" | sed 1d > ${dir2}/irbe  
-        samtools faidx "$working_fa" "$ira_start" | sed "s/$ira_start/IRa/" > ${dir2}/iras 
-        samtools faidx "$working_fa" "$ira_end" | sed 1d > ${dir2}/irae  
-        cat ${dir2}/irbs ${dir2}/irbe > ${dir2}/IRb.fa 
-        cat ${dir2}/iras ${dir2}/irae > ${dir2}/IRa.fa 
-        
-        samtools faidx "$working_fa" "$lsc" | sed 1d > ${dir2}/LSC.fa 
-        samtools faidx "$working_fa" "$ssc" | sed 1d > ${dir2}/SSC.fa 
-        cat ${dir2}/IRa.fa ${dir2}/IRb.fa | sed 1d > ${dir2}/_tmp_irs.fa
-        
-        cat ${dir2}/header ${dir2}/LSC.fa ${dir2}/iras ${dir2}/irae ${dir2}/SSC.fa ${dir2}/irbs ${dir2}/irbe | sed '/^>/d' | tr -d '\n' > ${dir2}/seq_only
-        cat ${dir2}/header ${dir2}/seq_only | sed "s/^>.*$/>${prefix}/" > "${dir2}/out_${opt_num}.fa"
-    else 
-        # Logic for sequences split at boundaries
-        if [ "$(cat ${dir2}/_tmp.blast.out | awk '$3=='$seq_len'||$2==1 {print "yes"}')" == "yes" ]; then
-             # [Insert specific boundary split logic if needed, but usually defaults to clean output]
-             cat "$working_fa" | sed ':a; $!N; /^>/!s/\n\([^>]\)/\1/; ta; P; D' | sed "s/^>.*$/>${prefix}/" > "${dir2}/out_${opt_num}.fa"
-        else
-             cat "$working_fa" | sed ':a; $!N; /^>/!s/\n\([^>]\)/\1/; ta; P; D' | sed "s/^>.*$/>${prefix}/" > "${dir2}/out_${opt_num}.fa"
-        fi
+    # Calculate gap sizes (Gap A is internal, Gap B wraps around the file edges)
+    local gapA=$(( C3 - C2 ))
+    local gapB=$(( seq_len - C4 + C1 ))
+
+    # The larger gap is the Large Single Copy (LSC)
+    local shift_pos=1
+    if [ $gapA -gt $gapB ]; then
+        shift_pos=$C2
+    else
+        shift_pos=$C4
     fi
+    
+    echo -e "IRs identified. Shifting start position to LSC boundary at base ${shift_pos}..."
+    
+    # Strip the header to create a continuous string of nucleotides
+    sed 1d "$working_fa" | tr -d '\n' > "${dir2}/seq_only"
+    
+    # Slice and stitch
+    echo ">${prefix}" > "${dir2}/out_${opt_num}.fa"
+    if [ "$shift_pos" -eq 1 ]; then
+        # Already at boundary, no cut needed
+        cat "${dir2}/seq_only" | fold -w 80 >> "${dir2}/out_${opt_num}.fa"
+    else
+        local chunkA=$(cut -c ${shift_pos}-${seq_len} "${dir2}/seq_only")
+        local chunkB=$(cut -c 1-$((shift_pos - 1)) "${dir2}/seq_only")
+        echo "${chunkA}${chunkB}" | fold -w 80 >> "${dir2}/out_${opt_num}.fa"
+    fi
+
+  else 
+    echo "No significant IR detected, outputting oriented genome."
+    cat "$working_fa" | sed ':a; $!N; /^>/!s/\n\([^>]\)/\1/; ta; P; D' | sed "s/^>.*$/>${prefix}/" | fold -w 80 > "${dir2}/out_${opt_num}.fa"
   fi
 }
 
@@ -133,13 +117,9 @@ if [ ${#OPTIONS[@]} -eq 0 ]; then
     exit 1
 fi
 
-BEST_SCORE=0
-WINNER=""
-WINNING_NAME=""
-
-# --- MAIN RACE ---
 BEST_SCORE=-1
 WINNER=""
+WINNING_NAME=""
 
 for opt_path in "${OPTIONS[@]}"; do
     [ "$(basename "$opt_path")" == "$(basename "$out")" ] && continue
@@ -149,7 +129,6 @@ for opt_path in "${OPTIONS[@]}"; do
     
     standardize "$opt_path" "$num"
     
-    # CORRECTED PATH: Must match the dir2 variable inside the standardize function
     CURRENT_OUT="${dir}/_tmp_plastaumatic/out_${num}.fa"
     
     if [ -f "$CURRENT_OUT" ]; then
