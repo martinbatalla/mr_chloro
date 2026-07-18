@@ -66,7 +66,7 @@ process GETORGANELLE {
 
 process STANDARDIZE{
     tag "${sample_id}"
-    container 'martinbatalla/mr_chloro:v1'
+    container 'martinbatalla/mr_chloro:v2'
     
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
@@ -89,7 +89,7 @@ process STANDARDIZE{
 
 process EXTRACT{
     tag "${sample_id}"
-    container 'martinbatalla/mr_chloro:v1'   
+    container 'martinbatalla/mr_chloro:v2'   
 
     input:
     tuple val(sample_id),  path(scaffolds)
@@ -108,7 +108,7 @@ process EXTRACT{
 
 process BEST_FASTA{
     tag "${sample_id}"
-    container 'martinbatalla/mr_chloro:v1'
+    container 'martinbatalla/mr_chloro:v2'
 
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
@@ -233,7 +233,7 @@ process NOVOPLASTY{
 process BWA_MAP{
     tag "${sample_id}"
 
-    container 'martinbatalla/mr_chloro:v1'
+    container 'martinbatalla/mr_chloro:v2'
 
     input:
     tuple val(sample_id), path(raw_fasta), path(trimmed_r1), path(trimmed_r2) 
@@ -293,7 +293,7 @@ process PILON{
 
 process REMAP{
     tag "${sample_id}"
-    container 'martinbatalla/mr_chloro:v1'
+    container 'martinbatalla/mr_chloro:v2'
 
     input:
     tuple val(sample_id), path(polished_fasta), path(pilon_changes), path(trimmed_r1), path(trimmed_r2)
