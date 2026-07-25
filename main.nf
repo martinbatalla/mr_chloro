@@ -441,6 +441,9 @@ workflow {
                     return tuple(sample_id, "draft", largest_fasta)
                 }
             }
+            .filter { sample_id, status, fasta ->
+                status == "complete" || (status == "draft" && fasta.size() > 150000)
+            }
     }
 
     // COMMON DOWNSTREAM PIPELINE (Runs for both modes)
