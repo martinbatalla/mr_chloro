@@ -109,6 +109,8 @@ OPTIONS+=(${dir}/Contigs_*_${prefix}.fasta)
 # GetOrganelle outputs:
 OPTIONS+=(${dir}/*.complete.*.path_sequence.fasta)
 OPTIONS+=(${dir}/*.scaffolds.*.path_sequence.fasta)
+# User-provided raw fastas (for Polish-Only mode):
+OPTIONS+=(${dir}/*_raw.fasta)
 
 shopt -u nullglob
 

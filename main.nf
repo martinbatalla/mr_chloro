@@ -373,68 +373,88 @@ workflow {
     Reference Seed : ${params.ref_seed}
     Reference GB   : ${params.ref_gb}
     Output Dir     : ${params.out_dir}
+    Polish Only    : ${params.polish_only}
+    Assemblies Dir : ${params.assemblies_dir}
     =================================================
     """
     .stripIndent()
 
-
+    // Trim reads (ALWAYS REQUIRED for downstream mapping/polishing)
     read_pairs_ch = Channel.fromFilePairs("${params.input_dir}/*_R{1,2}_001.fastq.gz", flat: true)
-
     FASTP(read_pairs_ch)
 
-    GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed), "${projectDir}/go_config")
-
-    // Organize getorganelle output
-    scaffold_branch_ch = GETORGANELLE.out.scaffold_paths
-        .branch {
-            multiple: [it[1]].flatten().size() > 1
-            single:   [it[1]].flatten().size() == 1
+    // Branch: Polish-Only vs Full Assembly
+    if (params.polish_only) {
+        if (!params.assemblies_dir) {
+            error "ERROR: You must provide an --assemblies_dir when --polish_only is true."
         }
 
-    EXTRACT(scaffold_branch_ch.single)
-
-    ORIENT(EXTRACT.out.pre_seed_file, file(params.ref_seed))
-
-    BEST_FASTA(scaffold_branch_ch.multiple, file(params.ref_gb))
-    
-    orient_fastp_ch = ORIENT.out.seed_file.mix(BEST_FASTA.out.seed_file).join(FASTP.out.trimmed_reads)
-    NOVOPLASTY(orient_fastp_ch, file(params.ref_seed))
-
-    def complete_assemblies = GETORGANELLE.out.complete_paths
-        .mix(NOVOPLASTY.out.novo_complete, NOVOPLASTY.out.novo_isomers)
-        .map { sample_id, fasta -> tuple(sample_id, "complete", fasta) }
-
-    def draft_assemblies = GETORGANELLE.out.scaffold_paths
-        .mix(NOVOPLASTY.out.novo_scaffolds)
-        .map { sample_id, fasta -> tuple(sample_id, "draft", fasta) }
-
-
-    VERIFY_CIRCULAR(complete_assemblies, file(params.ref_seed))
-
-    def all_tagged_assemblies = VERIFY_CIRCULAR.out.verified_assembly.mix(draft_assemblies)
-
-    standardize_ch = all_tagged_assemblies
-        .groupTuple(by: 0)
-        .map { sample_id, statuses, fastas ->
-            def complete_idx = statuses.indexOf("complete")
-            if (complete_idx != -1) {
-                return tuple(sample_id, "complete", fastas[complete_idx])
-            } else {
-                def largest_fasta = fastas.max { it.size() }
-                return tuple(sample_id, "draft", largest_fasta)
+        log.info "POLISH ONLY MODE: Skipping assembly steps and grabbing pre-existing FASTAs..."
+        
+        // Grab pre-assembled fastas matching the *raw.fasta pattern
+        standardize_ch = Channel.fromPath("${params.assemblies_dir}/*_raw.fasta")
+            .map { file -> 
+                // Strip '_raw.fasta' to get the clean sample_id
+                def sample_id = file.name.replaceAll(/_raw\.fasta$/, "")
+                tuple(sample_id, "complete", file) 
             }
-        }
 
+    } else {
+        log.info "FULL RUN MODE: Running GetOrganelle and NOVOPlasty..."
+
+        GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed), "${projectDir}/go_config")
+
+        // Organize getorganelle output
+        scaffold_branch_ch = GETORGANELLE.out.scaffold_paths
+            .branch {
+                multiple: [it[1]].flatten().size() > 1
+                single:   [it[1]].flatten().size() == 1
+            }
+
+        EXTRACT(scaffold_branch_ch.single)
+        ORIENT(EXTRACT.out.pre_seed_file, file(params.ref_seed))
+        BEST_FASTA(scaffold_branch_ch.multiple, file(params.ref_gb))
+        
+        orient_fastp_ch = ORIENT.out.seed_file.mix(BEST_FASTA.out.seed_file).join(FASTP.out.trimmed_reads)
+        NOVOPLASTY(orient_fastp_ch, file(params.ref_seed))
+
+        def complete_assemblies = GETORGANELLE.out.complete_paths
+            .mix(NOVOPLASTY.out.novo_complete, NOVOPLASTY.out.novo_isomers)
+            .map { sample_id, fasta -> tuple(sample_id, "complete", fasta) }
+
+        def draft_assemblies = GETORGANELLE.out.scaffold_paths
+            .mix(NOVOPLASTY.out.novo_scaffolds)
+            .map { sample_id, fasta -> tuple(sample_id, "draft", fasta) }
+
+        VERIFY_CIRCULAR(complete_assemblies, file(params.ref_seed))
+
+        def all_tagged_assemblies = VERIFY_CIRCULAR.out.verified_assembly.mix(draft_assemblies)
+
+        standardize_ch = all_tagged_assemblies
+            .groupTuple(by: 0)
+            .map { sample_id, statuses, fastas ->
+                def complete_idx = statuses.indexOf("complete")
+                if (complete_idx != -1) {
+                    return tuple(sample_id, "complete", fastas[complete_idx])
+                } else {
+                    def largest_fasta = fastas.max { it.size() }
+                    return tuple(sample_id, "draft", largest_fasta)
+                }
+            }
+    }
+
+    // COMMON DOWNSTREAM PIPELINE (Runs for both modes)
     STANDARDIZE(standardize_ch, file(params.ref_gb))
 
+    // Join with trimmed reads
     bwa_channel = STANDARDIZE.out.raw_fasta.join(FASTP.out.trimmed_reads)
     BWA_MAP(bwa_channel)
 
-    // Join on both sample_id and status (indices 0 and 1) to be safe
+    // Join on both sample_id and status
     pilon_channel = STANDARDIZE.out.raw_fasta.join(BWA_MAP.out.cp_bam, by: [0, 1])
     PILON(pilon_channel)
 
-    // Check if pilon changed anything (index 3 is the .changes file)
+    // Check if pilon changed anything
     remap_ch = PILON.out.polished_fasta
         .branch {
             no_change: it[3].size() == 0
