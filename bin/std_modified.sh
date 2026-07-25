@@ -105,6 +105,7 @@ OPTIONS=()
 # NOVOPlasty outputs:
 OPTIONS+=(${dir}/Option_*_${prefix}.fasta)
 OPTIONS+=(${dir}/Circularized_assembly_*_${prefix}.fasta)
+OPTIONS+=(${dir}/Contigs_*_${prefix}.fasta)
 # GetOrganelle outputs:
 OPTIONS+=(${dir}/*.complete.*.path_sequence.fasta)
 OPTIONS+=(${dir}/*.scaffolds.*.path_sequence.fasta)

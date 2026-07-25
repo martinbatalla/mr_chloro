@@ -424,14 +424,9 @@ workflow {
                 return tuple(sample_id, "draft", largest_fasta)
             }
         }
-        // Only allow 'complete' samples to continue down the pipeline
-        .filter { sample_id, status, fasta -> 
-            status == "complete" 
-        }
 
     STANDARDIZE(standardize_ch, file(params.ref_gb))
 
-    // Update the joins to account for the new status string in the tuple
     bwa_channel = STANDARDIZE.out.raw_fasta.join(FASTP.out.trimmed_reads)
     BWA_MAP(bwa_channel)
 
