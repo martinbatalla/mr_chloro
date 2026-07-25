@@ -420,10 +420,13 @@ workflow {
             if (complete_idx != -1) {
                 return tuple(sample_id, "complete", fastas[complete_idx])
             } else {
-                // Multiple drafts exist. Pick the largest sequence.
                 def largest_fasta = fastas.max { it.size() }
                 return tuple(sample_id, "draft", largest_fasta)
             }
+        }
+        // Only allow 'complete' samples to continue down the pipeline
+        .filter { sample_id, status, fasta -> 
+            status == "complete" 
         }
 
     STANDARDIZE(standardize_ch, file(params.ref_gb))
