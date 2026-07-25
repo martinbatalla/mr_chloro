@@ -327,7 +327,7 @@ process REMAP{
 
 process STATS{
     tag "${sample_id}"
-    container 'quay.io/biocontainers/samtools:1.17.0--h9f5bfce_0'
+    container 'quay.io/biocontainers/samtools:1.20--h50ea8bc_0'
 
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
