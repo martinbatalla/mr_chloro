@@ -224,6 +224,35 @@ process NOVOPLASTY{
     """
 }
 
+process VERIFY_CIRCULAR {
+    tag "${sample_id}"
+    container 'quay.io/biocontainers/blast:2.9.0--pl526he19e7b1_7'
+
+    input:
+    tuple val(sample_id), val(status), path(fasta)
+    path ref_seed
+
+    output:
+    tuple val(sample_id), env(VERIFIED_STATUS), path(fasta), emit: verified_assembly
+
+    script:
+    """
+    # Sum alignment lengths ONLY if the strand is in the standard (plus) direction
+    TOTAL_SCORE=\$(blastn -query "${fasta}" -subject "${ref_seed}" -outfmt '6 length sstrand' | awk '\$2 == "plus" {sum+=\$1} END {print sum}')
+    
+    # Handle empty results to prevent bash syntax errors
+    TOTAL_SCORE=\${TOTAL_SCORE:-0}
+
+    if [ "\$TOTAL_SCORE" -ge 155000 ]; then
+        export VERIFIED_STATUS="complete"
+        echo "Valid: ${sample_id} scored \$TOTAL_SCORE in standard orientation."
+    else
+        export VERIFIED_STATUS="draft"
+        echo "Demoted: ${sample_id} scored \$TOTAL_SCORE in standard orientation. Flagging as draft."
+    fi
+    """
+}
+
 process BWA_MAP{
     tag "${sample_id}"
 
@@ -371,7 +400,6 @@ workflow {
     orient_fastp_ch = ORIENT.out.seed_file.mix(BEST_FASTA.out.seed_file).join(FASTP.out.trimmed_reads)
     NOVOPLASTY(orient_fastp_ch, file(params.ref_seed))
 
-    // Map all outputs into triplets: [sample_id, "status", fasta_path]
     def complete_assemblies = GETORGANELLE.out.complete_paths
         .mix(NOVOPLASTY.out.novo_complete, NOVOPLASTY.out.novo_isomers)
         .map { sample_id, fasta -> tuple(sample_id, "complete", fasta) }
@@ -380,10 +408,11 @@ workflow {
         .mix(NOVOPLASTY.out.novo_scaffolds)
         .map { sample_id, fasta -> tuple(sample_id, "draft", fasta) }
 
-    // Mix all outputs together into one channel
-    def all_tagged_assemblies = complete_assemblies.mix(draft_assemblies)
 
-    // Group by sample_id, and only keep the "complete" assembly if it exists
+    VERIFY_CIRCULAR(complete_assemblies, file(params.ref_seed))
+
+    def all_tagged_assemblies = VERIFY_CIRCULAR.out.verified_assembly.mix(draft_assemblies)
+
     standardize_ch = all_tagged_assemblies
         .groupTuple(by: 0)
         .map { sample_id, statuses, fastas ->
