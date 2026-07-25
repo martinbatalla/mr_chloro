@@ -10,11 +10,9 @@ process FASTP {
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: "*.{html,json}"
     
     input:
-    // Take a sample ID and a pair of reads from the input channel
     tuple val(sample_id), path(r1), path(r2)
 
     output:
-    // Bundle the sample ID and the new trimmed files into an output channel
     tuple val(sample_id), path("${sample_id}_R1.trimmed.fastq.gz"), path("${sample_id}_R2.trimmed.fastq.gz"), emit: trimmed_reads
     path "${sample_id}_fastp.html", emit: html_report
     path "${sample_id}_fastp.json", emit: json_report
@@ -33,18 +31,14 @@ process GETORGANELLE {
     tag "${sample_id}"
     container 'quay.io/biocontainers/getorganelle:1.7.7.1--pyhdfd78af_0'
     
-    // Move only the final fasta assembly results to results folder
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: "*.fasta"
 
     input:
-    // Accept the trimmed reads bundle from FASTP
     tuple val(sample_id), path(trimmed_r1), path(trimmed_r2)
-    // Accept the global reference seed file path
     path ref_seed
     path go_config_dir
 
     output:
-    // Export the final assembly path so we can pass it to downstream validation tools later
     tuple val(sample_id), path("${sample_id}_getorganelle_output"), emit: assembly_dir
     tuple val(sample_id), path("${sample_id}_getorganelle_output/*.complete.*.path_sequence.fasta"), emit: complete_paths, optional: true
     tuple val(sample_id), path("${sample_id}_getorganelle_output/*.scaffolds.*.path_sequence.fasta"), emit: scaffold_paths, optional: true
@@ -71,18 +65,18 @@ process STANDARDIZE{
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
-    tuple val(sample_id), path(getorganelle_fasta)
+    tuple val(sample_id), val(status), path(getorganelle_fasta)
     path ref_gb
 
     output:
-    tuple val(sample_id), path("${sample_id}_cpDNA_raw.fasta"), emit: raw_fasta
+    tuple val(sample_id), val(status), path("${sample_id}_${status}_cpDNA_raw.fasta"), emit: raw_fasta
 
     script:
     """
     std_modified.sh \
     -d . \
     -g ${ref_gb} \
-    -o "${sample_id}_cpDNA_raw.fasta" \
+    -o "${sample_id}_${status}_cpDNA_raw.fasta" \
     -p ${sample_id}
     """  
 }
@@ -236,14 +230,14 @@ process BWA_MAP{
     container 'martinbatalla/mr_chloro:v2.1'
 
     input:
-    tuple val(sample_id), path(raw_fasta), path(trimmed_r1), path(trimmed_r2) 
+    tuple val(sample_id), val(status), path(raw_fasta), path(trimmed_r1), path(trimmed_r2) 
 
     output:
-    tuple val (sample_id), path("${sample_id}_cpDNA.bam"), path("${sample_id}_cpDNA.bam.bai"), emit: cp_bam
+    tuple val(sample_id), val(status), path("${sample_id}_${status}_cpDNA.bam"), path("${sample_id}_${status}_cpDNA.bam.bai"), emit: cp_bam
 
     script:
     """
-    echo "=== Mapping reads for ${sample_id} ==="
+    echo "=== Mapping reads for ${sample_id} (${status}) ==="
 
     # Step 1: Index the assembly
     bwa-mem2 index "${raw_fasta}"
@@ -251,12 +245,12 @@ process BWA_MAP{
     # Step 2: Map reads and sort
     # We use 1G per thread for sorting to stay safe within your 64G RAM limit
     bwa-mem2 mem -t ${task.cpus} ${raw_fasta} ${trimmed_r1} ${trimmed_r2} | \
-    samtools view -@ ${task.cpus} -Sb - | samtools sort -@ ${task.cpus} -m 1G -o "${sample_id}_cpDNA.bam" -
+    samtools view -@ ${task.cpus} -Sb - | samtools sort -@ ${task.cpus} -m 1G -o "${sample_id}_${status}_cpDNA.bam" -
 
     # Step 3: Index the resulting BAM
-    if [[ -f "${sample_id}_cpDNA.bam" ]]; then
-        samtools index "${sample_id}_cpDNA.bam"
-        echo "Successfully created ${sample_id}_cpDNA.bam"
+    if [[ -f "${sample_id}_${status}_cpDNA.bam" ]]; then
+        samtools index "${sample_id}_${status}_cpDNA.bam"
+        echo "Successfully created ${sample_id}_${status}_cpDNA.bam"
     else
         echo "ERROR: Mapping failed."
         exit 1
@@ -272,20 +266,19 @@ process PILON{
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy', pattern: '*.fasta'
 
     input:
-    tuple val(sample_id), path(raw_fasta), path(cp_bam), path(cp_bai)
+    tuple val(sample_id), val(status), path(raw_fasta), path(cp_bam), path(cp_bai)
 
     output:
-    tuple val(sample_id), path("${sample_id}_cpDNA_polished.fasta"), path("${sample_id}_cpDNA_polished.changes"), emit: polished_fasta
+    tuple val(sample_id), val(status), path("${sample_id}_${status}_cpDNA_polished.fasta"), path("${sample_id}_${status}_cpDNA_polished.changes"), emit: polished_fasta
 
     script:
     """
-    echo "Step 5: polishing genome"
-    # Provide java with more memory, if not it will crash. 48g might be an overkill, CHECK!!
+    echo "Step 5: polishing genome (${status})"
     export _JAVA_OPTIONS="-Xmx48g"
     pilon \
         --genome ${raw_fasta} \
         --frags ${cp_bam} \
-        --output ${sample_id}_cpDNA_polished \
+        --output ${sample_id}_${status}_cpDNA_polished \
         --changes --threads ${task.cpus}
 
     """
@@ -296,27 +289,26 @@ process REMAP{
     container 'martinbatalla/mr_chloro:v2.1'
 
     input:
-    tuple val(sample_id), path(polished_fasta), path(pilon_changes), path(trimmed_r1), path(trimmed_r2)
+    tuple val(sample_id), val(status), path(polished_fasta), path(pilon_changes), path(trimmed_r1), path(trimmed_r2)
 
     output:
-    tuple val(sample_id), path("${sample_id}_polished.bam"), path("${sample_id}_polished.bam.bai"), emit: polished_bam
+    tuple val(sample_id), val(status), path("${sample_id}_${status}_polished.bam"), path("${sample_id}_${status}_polished.bam.bai"), emit: polished_bam
 
     script:
     """
-    echo "=== Remapping reads for polished ${sample_id} fasta ==="
+    echo "=== Remapping reads for polished ${sample_id} (${status}) fasta ==="
 
     # Step 1: Index the assembly
     bwa-mem2 index "${polished_fasta}"
 
     # Step 2: Map reads and sort
-    # We use 1G per thread for sorting to stay safe within your 64G RAM limit
     bwa-mem2 mem -t ${task.cpus} ${polished_fasta} ${trimmed_r1} ${trimmed_r2} | \
-    samtools view -@ ${task.cpus} -Sb - | samtools sort -@ ${task.cpus} -m 1G -o "${sample_id}_polished.bam" -
+    samtools view -@ ${task.cpus} -Sb - | samtools sort -@ ${task.cpus} -m 1G -o "${sample_id}_${status}_polished.bam" -
 
     # Step 3: Index the resulting BAM
-    if [[ -f "${sample_id}_polished.bam" ]]; then
-        samtools index "${sample_id}_polished.bam"
-        echo "Successfully created ${sample_id}_polished.bam"
+    if [[ -f "${sample_id}_${status}_polished.bam" ]]; then
+        samtools index "${sample_id}_${status}_polished.bam"
+        echo "Successfully created ${sample_id}_${status}_polished.bam"
     else
         echo "ERROR: Re-mapping failed."
         exit 1
@@ -332,14 +324,14 @@ process STATS{
     publishDir { "${params.out_dir}/${sample_id}" }, mode: 'copy'
 
     input:
-    tuple val(sample_id), path(final_bam), path(final_bai)
+    tuple val(sample_id), val(status), path(final_bam), path(final_bai)
 
     output:
-    tuple val(sample_id), path("${sample_id}_coverage.txt"), emit: coverage_stats
+    tuple val(sample_id), val(status), path("${sample_id}_${status}_coverage.txt"), emit: coverage_stats
 
     script:
     """
-    samtools coverage ${final_bam} | tee ${sample_id}_coverage.txt
+    samtools coverage ${final_bam} | tee ${sample_id}_${status}_coverage.txt
     """
 }
 
@@ -357,16 +349,10 @@ workflow {
     .stripIndent()
 
 
-    // Capture all paired-end sequencing files matching pattern
-    // flat: true ensures R1 and R2 are passed as an array [R1, R2]
     read_pairs_ch = Channel.fromFilePairs("${params.input_dir}/*_R{1,2}_001.fastq.gz", flat: true)
 
-    // Feed the channel of raw reads directly into the FASTP process
     FASTP(read_pairs_ch)
 
-    // Run GETORGANELLE
-    //   FASTP.out.trimmed_reads (the tuple containing sample_id, trimmed r1, and trimmed r2)
-    //   params.ref_seed (the global path to seed file)
     GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed), "${projectDir}/go_config")
 
     // Organize getorganelle output
@@ -385,34 +371,56 @@ workflow {
     orient_fastp_ch = ORIENT.out.seed_file.mix(BEST_FASTA.out.seed_file).join(FASTP.out.trimmed_reads)
     NOVOPLASTY(orient_fastp_ch, file(params.ref_seed))
 
-    // Create a channel for standardize process input
-    standardize_ch = GETORGANELLE.out.complete_paths
-        .mix(
-            NOVOPLASTY.out.novo_complete,
-            NOVOPLASTY.out.novo_isomers
-        )
+    // Map all outputs into triplets: [sample_id, "status", fasta_path]
+    def complete_assemblies = GETORGANELLE.out.complete_paths
+        .mix(NOVOPLASTY.out.novo_complete, NOVOPLASTY.out.novo_isomers)
+        .map { sample_id, fasta -> tuple(sample_id, "complete", fasta) }
+
+    def draft_assemblies = GETORGANELLE.out.scaffold_paths
+        .mix(NOVOPLASTY.out.novo_scaffolds)
+        .map { sample_id, fasta -> tuple(sample_id, "draft", fasta) }
+
+    // Mix all outputs together into one channel
+    def all_tagged_assemblies = complete_assemblies.mix(draft_assemblies)
+
+    // Group by sample_id, and only keep the "complete" assembly if it exists
+    standardize_ch = all_tagged_assemblies
+        .groupTuple(by: 0)
+        .map { sample_id, statuses, fastas ->
+            def complete_idx = statuses.indexOf("complete")
+            if (complete_idx != -1) {
+                // Return the complete genome
+                return tuple(sample_id, "complete", fastas[complete_idx])
+            } else {
+                // If no complete genome exists, pass the draft scaffold forward
+                return tuple(sample_id, "draft", fastas[0])
+            }
+        }
+
     STANDARDIZE(standardize_ch, file(params.ref_gb))
 
+    // Update the joins to account for the new status string in the tuple
     bwa_channel = STANDARDIZE.out.raw_fasta.join(FASTP.out.trimmed_reads)
     BWA_MAP(bwa_channel)
 
-    pilon_channel = STANDARDIZE.out.raw_fasta.join(BWA_MAP.out.cp_bam)
+    // Join on both sample_id and status (indices 0 and 1) to be safe
+    pilon_channel = STANDARDIZE.out.raw_fasta.join(BWA_MAP.out.cp_bam, by: [0, 1])
     PILON(pilon_channel)
 
-    // check if pilon changed anything
+    // Check if pilon changed anything (index 3 is the .changes file)
     remap_ch = PILON.out.polished_fasta
         .branch {
-            no_change: it[2].size() == 0
-            change:   it[2].size() > 0
+            no_change: it[3].size() == 0
+            change:   it[3].size() > 0
         }
     
     remap_channel = remap_ch.change.join(FASTP.out.trimmed_reads)
     REMAP(remap_channel)
 
     no_change_bams = remap_ch.no_change
-        .join(BWA_MAP.out.cp_bam)
-        .map { sample_id, polished_fasta, pilon_changes, orig_bam, orig_bai -> 
-            tuple(sample_id, orig_bam, orig_bai) 
+        .join(BWA_MAP.out.cp_bam, by: [0, 1])
+        .map { sample_id, status, polished_fasta, pilon_changes, orig_bam, orig_bai -> 
+            tuple(sample_id, status, orig_bam, orig_bai) 
         }
 
     final_stats_ch = REMAP.out.polished_bam.mix(no_change_bams)
