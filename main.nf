@@ -418,11 +418,11 @@ workflow {
         .map { sample_id, statuses, fastas ->
             def complete_idx = statuses.indexOf("complete")
             if (complete_idx != -1) {
-                // Return the complete genome
                 return tuple(sample_id, "complete", fastas[complete_idx])
             } else {
-                // If no complete genome exists, pass the draft scaffold forward
-                return tuple(sample_id, "draft", fastas[0])
+                // Multiple drafts exist. Pick the largest sequence.
+                def largest_fasta = fastas.max { it.size() }
+                return tuple(sample_id, "draft", largest_fasta)
             }
         }
 
