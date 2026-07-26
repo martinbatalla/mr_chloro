@@ -40,8 +40,7 @@ process GETORGANELLE {
 
     output:
     tuple val(sample_id), path("${sample_id}_getorganelle_output"), emit: assembly_dir
-    tuple val(sample_id), path("${sample_id}_getorganelle_output/*.complete.*.path_sequence.fasta"), emit: complete_paths, optional: true
-    tuple val(sample_id), path("${sample_id}_getorganelle_output/*.scaffolds.*.path_sequence.fasta"), emit: scaffold_paths, optional: true
+    tuple val(sample_id), path("${sample_id}_getorganelle_output/*.path_sequence.fasta"), emit: go_fastas, optional: true
 
     script:
     """
@@ -242,9 +241,9 @@ process VERIFY_CIRCULAR {
     FASTA_ARRAY=(${fasta})
     TEST_FASTA="\${FASTA_ARRAY[0]}"
 
-    # Sum alignment lengths ONLY if the strand is in the standard (plus) direction
-    TOTAL_SCORE=\$(blastn -query "\$TEST_FASTA" -subject "${ref_seed}" -outfmt '6 length sstrand' | awk '\$2 == "plus" {sum+=\$1} END {print sum}')
-    
+    # Sum alignment lengths regardless of orientation (STANDARDISE will take care of that later)
+    TOTAL_SCORE=\$(blastn -query "\$TEST_FASTA" -subject "${ref_seed}" -outfmt '6 length' | awk '{sum+=\$1} END {print sum}')
+
     # Handle empty results to prevent bash syntax errors
     TOTAL_SCORE=\${TOTAL_SCORE:-0}
 
@@ -409,8 +408,32 @@ workflow {
 
         GETORGANELLE(FASTP.out.trimmed_reads, file(params.ref_seed), "${projectDir}/go_config")
 
+        go_router_ch = GETORGANELLE.out.go_fastas
+            .map { sample_id, fastas ->
+                def fasta_list = fastas instanceof List ? fastas : [fastas]
+                def completes = fasta_list.findAll { it.name.contains('.complete.') }
+                
+                if (completes.size() > 0) {
+                    return tuple("complete", sample_id, completes)
+                } else {
+                    def scaffolds = fasta_list.findAll { it.name.contains('.scaffolds.') }
+                    if (scaffolds.size() > 0) {
+                        return tuple("incomplete", sample_id, scaffolds)
+                    } else {
+                        return tuple("failed", sample_id, [])
+                    }
+                }
+            }
+            .branch { type, sample_id, fasta ->
+                complete: type == "complete"
+                incomplete: type == "incomplete"
+            }
+
+        def go_completes = go_router_ch.complete.map { type, sample_id, fasta -> tuple(sample_id, "complete", fasta) }
+        def go_scaffolds = go_router_ch.incomplete.map { type, sample_id, fasta -> tuple(sample_id, fasta) }
+
         // Organize getorganelle output
-        scaffold_branch_ch = GETORGANELLE.out.scaffold_paths
+        scaffold_branch_ch = go_scaffolds
             .branch {
                 multiple: [it[1]].flatten().size() > 1
                 single:   [it[1]].flatten().size() == 1
@@ -423,29 +446,22 @@ workflow {
         orient_fastp_ch = ORIENT.out.seed_file.mix(BEST_FASTA.out.seed_file).join(FASTP.out.trimmed_reads)
         NOVOPLASTY(orient_fastp_ch, file(params.ref_seed))
 
-        def complete_assemblies = GETORGANELLE.out.complete_paths
-            .mix(NOVOPLASTY.out.novo_complete, NOVOPLASTY.out.novo_isomers)
+        def np_completes = NOVOPLASTY.out.novo_complete
+            .mix(NOVOPLASTY.out.novo_isomers)
             .map { sample_id, fasta -> tuple(sample_id, "complete", fasta) }
 
-        def draft_assemblies = GETORGANELLE.out.scaffold_paths
-            .mix(NOVOPLASTY.out.novo_scaffolds)
-            .map { sample_id, fasta -> tuple(sample_id, "draft", fasta) }
-
-        VERIFY_CIRCULAR(complete_assemblies, file(params.ref_seed))
-
-        def all_tagged_assemblies = VERIFY_CIRCULAR.out.verified_assembly.mix(draft_assemblies)
-
-        standardize_ch = all_tagged_assemblies
-            .groupTuple(by: 0)
-            .map { sample_id, statuses, fastas ->
-                def complete_idx = statuses.indexOf("complete")
-                if (complete_idx != -1) {
-                    return tuple(sample_id, "complete", fastas[complete_idx])
-                } else {
-                    def largest_fasta = fastas.max { it.size() }
-                    return tuple(sample_id, "draft", largest_fasta)
-                }
+        def draft_assemblies = NOVOPLASTY.out.novo_scaffolds
+            .map { sample_id, fasta -> 
+                def fasta_list = fasta instanceof List ? fasta : [fasta]
+                def largest_fasta = fasta_list.max { it.size() }
+                tuple(sample_id, "draft", largest_fasta) 
             }
+
+        def all_completes = go_completes.mix(np_completes)
+        VERIFY_CIRCULAR(all_completes, file(params.ref_seed))
+
+        standardize_ch = VERIFY_CIRCULAR.out.verified_assembly
+            .mix(draft_assemblies)
             .filter { sample_id, status, fasta ->
                 // Ensure we get the byte size of the file, even if Nextflow passed a list of isomers
                 def file_size = fasta instanceof List ? fasta[0].size() : fasta.size()
