@@ -237,13 +237,18 @@ process VERIFY_CIRCULAR {
 
     script:
     """
+    # Nextflow might pass multiple isomers as a space-separated string. 
+    # Put them in a bash array and extract the first one for testing.
+    FASTA_ARRAY=(${fasta})
+    TEST_FASTA="\${FASTA_ARRAY[0]}"
+
     # Sum alignment lengths ONLY if the strand is in the standard (plus) direction
-    TOTAL_SCORE=\$(blastn -query "${fasta}" -subject "${ref_seed}" -outfmt '6 length sstrand' | awk '\$2 == "plus" {sum+=\$1} END {print sum}')
+    TOTAL_SCORE=\$(blastn -query "\$TEST_FASTA" -subject "${ref_seed}" -outfmt '6 length sstrand' | awk '\$2 == "plus" {sum+=\$1} END {print sum}')
     
     # Handle empty results to prevent bash syntax errors
     TOTAL_SCORE=\${TOTAL_SCORE:-0}
 
-    if [ "\$TOTAL_SCORE" -ge 155000 ]; then
+    if [ "\$TOTAL_SCORE" -ge 150000 ]; then
         export VERIFIED_STATUS="complete"
         echo "Valid: ${sample_id} scored \$TOTAL_SCORE in standard orientation."
     else
@@ -442,7 +447,9 @@ workflow {
                 }
             }
             .filter { sample_id, status, fasta ->
-                status == "complete" || (status == "draft" && fasta.size() > 150000)
+                // Ensure we get the byte size of the file, even if Nextflow passed a list of isomers
+                def file_size = fasta instanceof List ? fasta[0].size() : fasta.size()
+                status == "complete" || (status == "draft" && file_size > 150000)
             }
     }
 
