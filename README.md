@@ -52,7 +52,7 @@ nextflow run martinbatalla/mr_chloro -profile aws --input_dir s3://your-bucket/r
 ## Dependencies
 
 You do **not** need to install any bioinformatics tools (BWA, GetOrganelle, NOVOPlasty, etc.) locally. The pipeline is fully containerized. You only need:
-* [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) (version 26.04.0 or later recommended)
+* [Nextflow](https://www.nextflow.io/docs/latest/getstarted.html) (version 23.10.1 or later recommended)
 * Docker (for local/AWS execution) OR Singularity (for HPC execution)
 
 If running via an HPC cluster, Nextflow and dependencies are usually already installed, although they may need to be loaded by user (e.g.: `module load nextflow`).
