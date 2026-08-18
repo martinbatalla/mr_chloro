@@ -41,7 +41,7 @@ nextflow run martinbatalla/mr_chloro -profile hpc --input_dir /path/to/reads --r
 
 **Run Polish-Only Mode (Skips Assembly):**
 ```bash
-nextflow run martinbatalla/mr_chloro -profile standard --mode polish --input_dir /path/to/reads --fasta_dir /path/to/fastas
+nextflow run martinbatalla/mr_chloro -profile standard --polish_only true --input_dir /path/to/reads --assemblies_dir /path/to/fastas
 ```
 
 **Run on AWS Cloud (requires AWS Batch):**
@@ -61,9 +61,9 @@ If running via an HPC cluster, Nextflow and dependencies are usually already ins
 
 | Parameter | Description |
 |-----------|-------------|
-| `--mode` | (Optional) Pipeline execution mode. Options: `assembly` (default) or `polish`. |
+| `--polish_only` | (Optional) Boolean flag to skip assembly steps and run polishing only. Default: `false`. |
 | `--input_dir` | Path to the directory containing paired-end fastq files (must end in `_R1_001.fastq.gz` and `_R2_001.fastq.gz`). |
-| `--fasta_dir` | (Required for Polish mode) Path to pre-assembled `.fasta` files. |
+| `--assemblies_dir` | (Required if `--polish_only true`) Path to the directory containing pre-assembled `.fasta` files. |
 | `--ref_seed` | (Required for Assembly mode) Path to `.fasta` seed file used for NOVOPlasty and GetOrganelle orientation. |
 | `--ref_gb` | (Required for Assembly mode) Path to GenBank (`.gb`) reference file used for standardizing the starting position. |
 | `--out_dir` | (Optional) Directory where results will be saved. Default: `results/`. |
