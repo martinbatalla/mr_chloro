@@ -61,11 +61,11 @@ If running via an HPC cluster, Nextflow and dependencies are usually already ins
 
 | Parameter | Description |
 |-----------|-------------|
-| `--polish_only` | (Optional) Boolean flag to skip assembly steps and run polishing only. Default: `false`. |
 | `--input_dir` | Path to the directory containing paired-end fastq files (must end in `_R1_001.fastq.gz` and `_R2_001.fastq.gz`). |
-| `--assemblies_dir` | (Required if `--polish_only true`) Path to the directory containing pre-assembled `.fasta` files. |
+| `--ref_gb` | Path to GenBank (`.gb`) reference file used for standardizing the starting position. |
 | `--ref_seed` | (Required for Assembly mode) Path to `.fasta` seed file used for NOVOPlasty and GetOrganelle orientation. |
-| `--ref_gb` | (Required for Assembly mode) Path to GenBank (`.gb`) reference file used for standardizing the starting position. |
+| `--polish_only` | (Optional) Boolean flag to skip assembly steps and run polishing only. Default: `false`. |
+| `--assemblies_dir` | (Required if `--polish_only true`) Path to the directory containing pre-assembled `${sample_id}_raw.fasta` files. |
 | `--out_dir` | (Optional) Directory where results will be saved. Default: `results/`. |
 | `--cpus` | (Optional) Number of CPUs assigned to processes. Default: local/AWS = 6, hpc = 16 |
 | `--memory` | (Optional) Memory allocated to processes. Default: local/AWS = '8 GB', hpc = '64 GB' |
