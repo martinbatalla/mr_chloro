@@ -39,14 +39,14 @@ nextflow run martinbatalla/mr_chloro -profile standard --input_dir /path/to/read
 nextflow run martinbatalla/mr_chloro -profile hpc --input_dir /path/to/reads --ref_seed /path/to/seed.fasta --ref_gb /path/to/reference.gb
 ```
 
-**Run Polish-Only Mode (Skips Assembly):**
-```bash
-nextflow run martinbatalla/mr_chloro -profile standard --polish_only true --input_dir /path/to/reads --assemblies_dir /path/to/fastas
-```
-
 **Run on AWS Cloud (requires AWS Batch):**
 ```bash
 nextflow run martinbatalla/mr_chloro -profile aws --input_dir s3://your-bucket/reads --ref_seed s3://your-bucket/seed.fasta --ref_gb s3://your-bucket/reference.gb --out_dir s3://your-bucket/results
+```
+
+**Run Polish-Only Mode (Skips Assembly; HPC example):**
+```bash
+nextflow run martinbatalla/mr_chloro -profile hpc --polish_only true --input_dir /path/to/reads --assemblies_dir /path/to/fastas --ref_gb /path/to/reference.gb
 ```
 
 ## Dependencies
